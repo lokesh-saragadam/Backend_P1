@@ -1,0 +1,165 @@
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css');
+
+/* CSS Variables */
+:root{
+    --main-color:#ffdd95;
+    --black:#222;
+    --light-black:#1a1a1a;
+    --bg-color:#0d0d0d;
+    --white:#fff;
+    --light-white:#aaa;
+}
+
+/* Global Reset */
+*{
+    box-sizing:content-box;
+    padding:5px;
+    margin:5px;
+    text-decoration:none;
+    outline:none;
+    border:none;
+    font-family:Verdana, Geneva, Tahoma, sans-serif;
+    transition:0.2s linear;
+    border: 20px;
+    border-color:#aaa;
+}
+
+/* Body */
+body{
+    background:var(--bg-color);
+    color:var(--white);
+    padding:20px;
+}
+
+/* Header */
+.home-page .header{
+    background:var(--light-black);
+    top:0;
+    left:0;
+    font-size:40px;
+    padding:40px;
+}
+
+.header a{
+    color: white;
+    text-decoration: none;
+}
+
+.header .hp1 {
+    position:absolute;
+    top:80px;
+    right:20%;
+    font-size:20px;
+    padding:20px;
+}
+
+.header .lp1{
+    position:absolute;
+    top:80px;
+    right:10%;
+    font-size:20px;
+    padding:20px;
+
+}
+
+.header .ap1{
+    position:absolute;
+    top:80px;
+    right:30%;
+    font-size:20px;
+    padding:20px;
+}
+
+/*Intro*/
+.intro{
+    position: absolute;
+    text-align: center;
+    margin-left:1%;
+    min-width: 90%;
+}
+.intro h2{
+    position: relative;
+    /* right:20%; */
+    display:block;
+    text-align: center;
+}
+.intro .notepad{
+    position: relative;
+    margin:-12px;
+}
+.intro .intro_text{
+    display:block;
+    text-align: center;
+}
+
+.intro .sign_in:hover {
+    background-color:white;
+    font-size:medium;
+}
+.intro .log_in:hover{
+    background-color: orange;
+    font-size:medium;
+}
+
+
+/* Search */
+.search-form{
+    display:flex;
+    align-items:center;
+}
+
+.search-bar input{
+    padding:8px 12px;
+    border-radius:5px;
+    background:var(--black);
+    color:var(--white);
+}
+
+
+/* Main form area */
+form, body > input, body > label{
+    margin-top:10px;
+}
+
+/* Input fields */
+input[type="text"],
+input[type="number"]{
+    width:300px;
+    padding:10px;
+    margin-top:10px;
+    border-radius:6px;
+    background:var(--light-black);
+    color:var(--white);
+    border:1px solid var(--main-color);
+}
+
+/* Radio buttons */
+input[type="radio"]{
+    margin-top:10px;
+    margin-right:5px;
+    align-self: center;
+    position:relative;
+}
+
+label{
+    margin-right:10px;
+}
+input[type="text"]{
+    margin-bottom: 2px;
+    margin-left:100px;
+    margin-right: 100px;
+}
+/* Submit button */
+input[type="submit"]{
+    margin-top:15px;
+    padding:10px 20px;
+    background:var(--main-color);
+    color:var(--black);
+    font-weight:bold;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+input[type="submit"]:hover{
+    background:#ffd26a;
+}

@@ -1,0 +1,714 @@
+[
+  {
+    "data": {
+      "matchedUser": {
+        "submitStats": {
+          "acSubmissionNum": [
+            {
+              "difficulty": "All",
+              "count": 156
+            },
+            {
+              "difficulty": "Easy",
+              "count": 47
+            },
+            {
+              "difficulty": "Medium",
+              "count": 87
+            },
+            {
+              "difficulty": "Hard",
+              "count": 22
+            }
+          ]
+        }
+      },
+      "userContestRanking": {
+        "rating": 1587.867,
+        "globalRanking": 219268,
+        "attendedContestsCount": 2
+      },
+      "recentAcSubmissionList": [
+        {
+          "id": "2003450917",
+          "title": "Palindromic Substrings",
+          "titleSlug": "palindromic-substrings",
+          "timestamp": "1778817725"
+        },
+        {
+          "id": "2003440898",
+          "title": "Clone Graph",
+          "titleSlug": "clone-graph",
+          "timestamp": "1778816658"
+        },
+        {
+          "id": "1939293425",
+          "title": "Zigzag Conversion",
+          "titleSlug": "zigzag-conversion",
+          "timestamp": "1772764731"
+        },
+        {
+          "id": "1753773228",
+          "title": "Twisted Mirror Path Count",
+          "titleSlug": "twisted-mirror-path-count",
+          "timestamp": "1756570393"
+        },
+        {
+          "id": "1753610732",
+          "title": "Find The Least Frequent Digit",
+          "titleSlug": "find-the-least-frequent-digit",
+          "timestamp": "1756565199"
+        },
+        {
+          "id": "1747795275",
+          "title": "Diagonal Traverse",
+          "titleSlug": "diagonal-traverse",
+          "timestamp": "1756130437"
+        },
+        {
+          "id": "1747738147",
+          "title": "Number of Islands",
+          "titleSlug": "number-of-islands",
+          "timestamp": "1756127134"
+        },
+        {
+          "id": "1744496430",
+          "title": "Binary Tree Right Side View",
+          "titleSlug": "binary-tree-right-side-view",
+          "timestamp": "1755877454"
+        },
+        {
+          "id": "1737293391",
+          "title": "Maximum 69 Number",
+          "titleSlug": "maximum-69-number",
+          "timestamp": "1755350258"
+        },
+        {
+          "id": "1731200610",
+          "title": "Subsets II",
+          "titleSlug": "subsets-ii",
+          "timestamp": "1754915847"
+        },
+        {
+          "id": "1731185284",
+          "title": "Permutations",
+          "titleSlug": "permutations",
+          "timestamp": "1754914775"
+        },
+        {
+          "id": "1724263086",
+          "title": "Fruits Into Baskets II",
+          "titleSlug": "fruits-into-baskets-ii",
+          "timestamp": "1754391834"
+        },
+        {
+          "id": "1721461496",
+          "title": "Minimum Time to Activate String",
+          "titleSlug": "minimum-time-to-activate-string",
+          "timestamp": "1754193564"
+        },
+        {
+          "id": "1721340956",
+          "title": "Maximum Balanced Shipments",
+          "titleSlug": "maximum-balanced-shipments",
+          "timestamp": "1754189257"
+        },
+        {
+          "id": "1721329262",
+          "title": "Trionic Array I",
+          "titleSlug": "trionic-array-i",
+          "timestamp": "1754188935"
+        },
+        {
+          "id": "1718334273",
+          "title": "Bitwise ORs of Subarrays",
+          "titleSlug": "bitwise-ors-of-subarrays",
+          "timestamp": "1753967017"
+        },
+        {
+          "id": "1710952137",
+          "title": "LRU Cache",
+          "titleSlug": "lru-cache",
+          "timestamp": "1753446141"
+        },
+        {
+          "id": "1710869700",
+          "title": "Maximum Unique Subarray Sum After Deletion",
+          "titleSlug": "maximum-unique-subarray-sum-after-deletion",
+          "timestamp": "1753440696"
+        },
+        {
+          "id": "1709779621",
+          "title": "Find the Duplicate Number",
+          "titleSlug": "find-the-duplicate-number",
+          "timestamp": "1753365902"
+        },
+        {
+          "id": "1709767566",
+          "title": "Copy List with Random Pointer",
+          "titleSlug": "copy-list-with-random-pointer",
+          "timestamp": "1753365245"
+        }
+      ]
+    }
+  },
+  [
+    {
+      "difficulty": "All",
+      "count": 156
+    },
+    {
+      "difficulty": "Easy",
+      "count": 47
+    },
+    {
+      "difficulty": "Medium",
+      "count": 87
+    },
+    {
+      "difficulty": "Hard",
+      "count": 22
+    }
+  ],
+  1587.867,
+  [
+    {
+      "id": "2003450917",
+      "title": "Palindromic Substrings",
+      "titleSlug": "palindromic-substrings",
+      "timestamp": "1778817725"
+    },
+    {
+      "id": "2003440898",
+      "title": "Clone Graph",
+      "titleSlug": "clone-graph",
+      "timestamp": "1778816658"
+    },
+    {
+      "id": "1939293425",
+      "title": "Zigzag Conversion",
+      "titleSlug": "zigzag-conversion",
+      "timestamp": "1772764731"
+    },
+    {
+      "id": "1753773228",
+      "title": "Twisted Mirror Path Count",
+      "titleSlug": "twisted-mirror-path-count",
+      "timestamp": "1756570393"
+    },
+    {
+      "id": "1753610732",
+      "title": "Find The Least Frequent Digit",
+      "titleSlug": "find-the-least-frequent-digit",
+      "timestamp": "1756565199"
+    },
+    {
+      "id": "1747795275",
+      "title": "Diagonal Traverse",
+      "titleSlug": "diagonal-traverse",
+      "timestamp": "1756130437"
+    },
+    {
+      "id": "1747738147",
+      "title": "Number of Islands",
+      "titleSlug": "number-of-islands",
+      "timestamp": "1756127134"
+    },
+    {
+      "id": "1744496430",
+      "title": "Binary Tree Right Side View",
+      "titleSlug": "binary-tree-right-side-view",
+      "timestamp": "1755877454"
+    },
+    {
+      "id": "1737293391",
+      "title": "Maximum 69 Number",
+      "titleSlug": "maximum-69-number",
+      "timestamp": "1755350258"
+    },
+    {
+      "id": "1731200610",
+      "title": "Subsets II",
+      "titleSlug": "subsets-ii",
+      "timestamp": "1754915847"
+    },
+    {
+      "id": "1731185284",
+      "title": "Permutations",
+      "titleSlug": "permutations",
+      "timestamp": "1754914775"
+    },
+    {
+      "id": "1724263086",
+      "title": "Fruits Into Baskets II",
+      "titleSlug": "fruits-into-baskets-ii",
+      "timestamp": "1754391834"
+    },
+    {
+      "id": "1721461496",
+      "title": "Minimum Time to Activate String",
+      "titleSlug": "minimum-time-to-activate-string",
+      "timestamp": "1754193564"
+    },
+    {
+      "id": "1721340956",
+      "title": "Maximum Balanced Shipments",
+      "titleSlug": "maximum-balanced-shipments",
+      "timestamp": "1754189257"
+    },
+    {
+      "id": "1721329262",
+      "title": "Trionic Array I",
+      "titleSlug": "trionic-array-i",
+      "timestamp": "1754188935"
+    },
+    {
+      "id": "1718334273",
+      "title": "Bitwise ORs of Subarrays",
+      "titleSlug": "bitwise-ors-of-subarrays",
+      "timestamp": "1753967017"
+    },
+    {
+      "id": "1710952137",
+      "title": "LRU Cache",
+      "titleSlug": "lru-cache",
+      "timestamp": "1753446141"
+    },
+    {
+      "id": "1710869700",
+      "title": "Maximum Unique Subarray Sum After Deletion",
+      "titleSlug": "maximum-unique-subarray-sum-after-deletion",
+      "timestamp": "1753440696"
+    },
+    {
+      "id": "1709779621",
+      "title": "Find the Duplicate Number",
+      "titleSlug": "find-the-duplicate-number",
+      "timestamp": "1753365902"
+    },
+    {
+      "id": "1709767566",
+      "title": "Copy List with Random Pointer",
+      "titleSlug": "copy-list-with-random-pointer",
+      "timestamp": "1753365245"
+    }
+  ],
+  [
+    "palindromic-substrings",
+    "clone-graph",
+    "zigzag-conversion",
+    "twisted-mirror-path-count",
+    "find-the-least-frequent-digit",
+    "diagonal-traverse",
+    "number-of-islands",
+    "binary-tree-right-side-view",
+    "maximum-69-number",
+    "subsets-ii",
+    "permutations",
+    "fruits-into-baskets-ii",
+    "minimum-time-to-activate-string",
+    "maximum-balanced-shipments",
+    "trionic-array-i",
+    "bitwise-ors-of-subarrays",
+    "lru-cache",
+    "maximum-unique-subarray-sum-after-deletion",
+    "find-the-duplicate-number",
+    "copy-list-with-random-pointer"
+  ],
+  {
+    "data": {
+      "q0": {
+        "questionId": "647",
+        "title": "Palindromic Substrings",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Two Pointers",
+            "slug": "two-pointers"
+          },
+          {
+            "name": "String",
+            "slug": "string"
+          },
+          {
+            "name": "Dynamic Programming",
+            "slug": "dynamic-programming"
+          }
+        ]
+      },
+      "q1": {
+        "questionId": "133",
+        "title": "Clone Graph",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Hash Table",
+            "slug": "hash-table"
+          },
+          {
+            "name": "Depth-First Search",
+            "slug": "depth-first-search"
+          },
+          {
+            "name": "Breadth-First Search",
+            "slug": "breadth-first-search"
+          },
+          {
+            "name": "Graph Theory",
+            "slug": "graph"
+          }
+        ]
+      },
+      "q2": {
+        "questionId": "6",
+        "title": "Zigzag Conversion",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "String",
+            "slug": "string"
+          }
+        ]
+      },
+      "q3": {
+        "questionId": "3938",
+        "title": "Twisted Mirror Path Count",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Dynamic Programming",
+            "slug": "dynamic-programming"
+          },
+          {
+            "name": "Matrix",
+            "slug": "matrix"
+          }
+        ]
+      },
+      "q4": {
+        "questionId": "3994",
+        "title": "Find The Least Frequent Digit",
+        "difficulty": "Easy",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Hash Table",
+            "slug": "hash-table"
+          },
+          {
+            "name": "Math",
+            "slug": "math"
+          },
+          {
+            "name": "Counting",
+            "slug": "counting"
+          }
+        ]
+      },
+      "q5": {
+        "questionId": "498",
+        "title": "Diagonal Traverse",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Matrix",
+            "slug": "matrix"
+          },
+          {
+            "name": "Simulation",
+            "slug": "simulation"
+          }
+        ]
+      },
+      "q6": {
+        "questionId": "200",
+        "title": "Number of Islands",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Depth-First Search",
+            "slug": "depth-first-search"
+          },
+          {
+            "name": "Breadth-First Search",
+            "slug": "breadth-first-search"
+          },
+          {
+            "name": "Union-Find",
+            "slug": "union-find"
+          },
+          {
+            "name": "Matrix",
+            "slug": "matrix"
+          }
+        ]
+      },
+      "q7": {
+        "questionId": "199",
+        "title": "Binary Tree Right Side View",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Tree",
+            "slug": "tree"
+          },
+          {
+            "name": "Depth-First Search",
+            "slug": "depth-first-search"
+          },
+          {
+            "name": "Breadth-First Search",
+            "slug": "breadth-first-search"
+          },
+          {
+            "name": "Binary Tree",
+            "slug": "binary-tree"
+          }
+        ]
+      },
+      "q8": {
+        "questionId": "1448",
+        "title": "Maximum 69 Number",
+        "difficulty": "Easy",
+        "topicTags": [
+          {
+            "name": "Math",
+            "slug": "math"
+          },
+          {
+            "name": "Greedy",
+            "slug": "greedy"
+          }
+        ]
+      },
+      "q9": {
+        "questionId": "90",
+        "title": "Subsets II",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Backtracking",
+            "slug": "backtracking"
+          },
+          {
+            "name": "Bit Manipulation",
+            "slug": "bit-manipulation"
+          }
+        ]
+      },
+      "q10": {
+        "questionId": "46",
+        "title": "Permutations",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Backtracking",
+            "slug": "backtracking"
+          }
+        ]
+      },
+      "q11": {
+        "questionId": "3790",
+        "title": "Fruits Into Baskets II",
+        "difficulty": "Easy",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Binary Search",
+            "slug": "binary-search"
+          },
+          {
+            "name": "Segment Tree",
+            "slug": "segment-tree"
+          },
+          {
+            "name": "Simulation",
+            "slug": "simulation"
+          },
+          {
+            "name": "Ordered Set",
+            "slug": "ordered-set"
+          }
+        ]
+      },
+      "q12": {
+        "questionId": "3944",
+        "title": "Minimum Time to Activate String",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Binary Search",
+            "slug": "binary-search"
+          }
+        ]
+      },
+      "q13": {
+        "questionId": "3954",
+        "title": "Maximum Balanced Shipments",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Dynamic Programming",
+            "slug": "dynamic-programming"
+          },
+          {
+            "name": "Stack",
+            "slug": "stack"
+          },
+          {
+            "name": "Greedy",
+            "slug": "greedy"
+          },
+          {
+            "name": "Monotonic Stack",
+            "slug": "monotonic-stack"
+          }
+        ]
+      },
+      "q14": {
+        "questionId": "3952",
+        "title": "Trionic Array I",
+        "difficulty": "Easy",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          }
+        ]
+      },
+      "q15": {
+        "questionId": "934",
+        "title": "Bitwise ORs of Subarrays",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Dynamic Programming",
+            "slug": "dynamic-programming"
+          },
+          {
+            "name": "Bit Manipulation",
+            "slug": "bit-manipulation"
+          }
+        ]
+      },
+      "q16": {
+        "questionId": "146",
+        "title": "LRU Cache",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Hash Table",
+            "slug": "hash-table"
+          },
+          {
+            "name": "Linked List",
+            "slug": "linked-list"
+          },
+          {
+            "name": "Design",
+            "slug": "design"
+          },
+          {
+            "name": "Doubly-Linked List",
+            "slug": "doubly-linked-list"
+          }
+        ]
+      },
+      "q17": {
+        "questionId": "3788",
+        "title": "Maximum Unique Subarray Sum After Deletion",
+        "difficulty": "Easy",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Hash Table",
+            "slug": "hash-table"
+          },
+          {
+            "name": "Greedy",
+            "slug": "greedy"
+          }
+        ]
+      },
+      "q18": {
+        "questionId": "287",
+        "title": "Find the Duplicate Number",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Array",
+            "slug": "array"
+          },
+          {
+            "name": "Two Pointers",
+            "slug": "two-pointers"
+          },
+          {
+            "name": "Binary Search",
+            "slug": "binary-search"
+          },
+          {
+            "name": "Bit Manipulation",
+            "slug": "bit-manipulation"
+          }
+        ]
+      },
+      "q19": {
+        "questionId": "138",
+        "title": "Copy List with Random Pointer",
+        "difficulty": "Medium",
+        "topicTags": [
+          {
+            "name": "Hash Table",
+            "slug": "hash-table"
+          },
+          {
+            "name": "Linked List",
+            "slug": "linked-list"
+          }
+        ]
+      }
+    }
+  }
+]
