@@ -2,7 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require('morgan');
-
+const process = require('process');
 //functions and other imports
 const log = require("./utils/logger");
 const {reset_Database} = require('./init/createTables')
@@ -82,6 +82,7 @@ async function datastart(){
 // altertables();
 datastart(); 
  
-app.listen(3000,()=>{
-    console.log('app is listening....')
+const PORT = process.env.PORT || 3000;
+app.listen(PORT,()=>{
+    console.log('app is listening on port', PORT)
 })
