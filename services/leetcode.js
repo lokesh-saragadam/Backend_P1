@@ -118,26 +118,26 @@ async function getBatchProblemData(titleSlugs) {
             "Referer": "https://leetcode.com",
             "User-Agent": "Mozilla/5.0"
             },
-            timeout : 10000
+            timeout : 20000
         }
     );
 
     return response.data;
 }
 async function checkavailability(slugs){
-    const result = await pool.query(
-    `
-    SELECT problemcode
-    FROM "Problem"
-    WHERE platformid = $1
-    AND problemcode = ANY($2)
-    `,
-    [1, slugs]
-    );
+    const result = await prisma.problem.findMany({
+        where: {
+            platformid: 1,
+            problemcode: {
+            in: slugs
+            }
+        },
+        select: {
+            problemcode: true
+        }
+        });
     const existing = new Set(
-        result.rows.map(
-            r => r.problemcode
-        )
+        result.map(row => row.problemcode)
     );
     const missingSlugs = slugs.filter(
             slug => !existing.has(slug)

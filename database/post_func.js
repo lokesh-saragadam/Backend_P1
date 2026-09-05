@@ -50,46 +50,47 @@ async function post_problems(db, platformid, unique_problems) {
     const problem_map = new Map();
     let successCount = 0;
 
-    for (const element of unique_problems) {
-        try {
-            // Using upsert prevents crashes if the problem already exists in the DB
-            const result = await db.Problem.upsert({
-                where: {
-                    // Prisma auto-generates this compound name based on @@unique([platformid, problemcode])
-                    platformid_problemcode: {
+    // Execute all upserts concurrently
+    await Promise.all(
+        unique_problems.map(async (element) => {
+            try {
+                const result = await db.Problem.upsert({
+                    where: {
+                        platformid_problemcode: {
+                            platformid: platformid,
+                            problemcode: element.problemcode
+                        }
+                    },
+                    update: {
+                        problemtitle: element.problemtitle,
+                        difficulty: element.difficulty,
+                        rating: element.rating,
+                        tags: element.tags
+                    },
+                    create: {
                         platformid: platformid,
-                        problemcode: element.problemcode
+                        problemcode: element.problemcode,
+                        problemtitle: element.problemtitle,
+                        difficulty: element.difficulty,
+                        rating: element.rating,
+                        tags: element.tags
                     }
-                },
-                update: {
-                    // Update details in case the platform changed them (e.g., rating changes)
-                    problemtitle: element.problemtitle,
-                    // titleSlug: element.titleSlug, // Ensure titleSlug is included
-                    difficulty: element.difficulty,
-                    rating: element.rating,
-                    tags: element.tags
-                },
-                create: {
-                    platformid: platformid,
-                    problemcode: element.problemcode,
-                    problemtitle: element.problemtitle,
-                    // titleSlug: element.titleSlug, // Ensure titleSlug is included
-                    difficulty: element.difficulty,
-                    rating: element.rating,
-                    tags: element.tags
-                }
-            });
-            
-            // Map the platform's string ID (problemcode) to our DB's Int ID (problemid)
-            problem_map.set(element.problemcode, result.problemid);
-            successCount++;
+                });
 
-        } catch (err) {
-            console.error("First failing problem:", element);
-            console.error(err);
-            throw err;    
-        } 
-    }
+                // Map the platform's string ID to our DB's Int ID
+                // JavaScript Maps are safe to update concurrently like this
+                problem_map.set(element.problemcode, result.problemid);
+
+            } catch (err) {
+                console.error("First failing problem:", element);
+                console.error(err);
+                throw err;
+            }
+        })
+    );
+
+    // If Promise.all finishes without throwing, all were successful
+    successCount += unique_problems.length;
 
     log("post_func.js", "post_problems", "Request resolved");
     
@@ -102,59 +103,35 @@ async function post_solved_problems(db, userid, submissions, problem_map) {
 
     let successCount = 0;
 
-    for (const elem of submissions) {
-        try {
-            // 1. Map the problem ID
-            const mappedProblemid = problem_map.get(elem.problemid);
-            
-            // Safety check: Skip if the problem isn't in our database/map yet
-            if (!mappedProblemid) {
-                console.warn(`Problem '${elem.problemid}' not found in map. Skipping...`);
-                continue; 
-            }
+    // 1. Format all valid submissions into a single massive array
+    const formattedSubmissions = submissions.reduce((acc, elem) => {
+        const mappedProblemid = problem_map.get(elem.problemid);
+        if (!mappedProblemid) return acc; // Skip missing problems
 
-            // 2. Standardize Timestamp to BigInt
-            let unixTimestamp;
-            if (elem.timestamp) {
-                // If it exists in the data (e.g., LeetCode '1787300983')
-                unixTimestamp = BigInt(elem.timestamp);
-            } else if (elem.solvedat) {
-                // If only solvedat exists (e.g., Codeforces), convert Date to ms timestamp
-                unixTimestamp = BigInt(new Date(elem.solvedat).getTime());
-            } else {
-                // Fallback just in case
-                unixTimestamp = BigInt(Date.now());
-            }
+        let unixTimestamp = elem.timestamp 
+            ? BigInt(elem.timestamp) 
+            : (elem.solvedat ? BigInt(new Date(elem.solvedat).getTime()) : BigInt(Date.now()));
 
-            // 3. Generate deterministic submissionKey (e.g., "1_452_1787300983")
-            const submissionKey = `${userid}_${mappedProblemid}_${unixTimestamp.toString()}`;
+        const submissionKey = `${userid}_${mappedProblemid}_${unixTimestamp.toString()}`;
 
-            // 4. Upsert using the unique submissionKey
-            const result = await db.Submission.upsert({
-                where: {
-                    submissionKey: submissionKey
-                },
-                update: {
-                    statusDisplay: elem.status,
-                    language: elem.language
-                },
-                create: {
-                    userid: userid,
-                    problemid: mappedProblemid,
-                    statusDisplay: elem.status,
-                    language: elem.language,
-                    timestamp: unixTimestamp,
-                    submissionKey: submissionKey
-                }
-            });
-            
-            successCount++;
+        acc.push({
+            userid: userid,
+            problemid: mappedProblemid,
+            statusDisplay: elem.status,
+            language: elem.language,
+            timestamp: unixTimestamp,
+            submissionKey: submissionKey
+        });
 
-        } catch (err) {
-            console.error("First failing problem:", elem);
-            console.error(err);
-            throw err;  
-        }
+        return acc;
+    }, []);
+
+    // 2. Insert them all in one single network request
+    if (formattedSubmissions.length > 0) {
+        await db.Submission.createMany({
+            data: formattedSubmissions,
+            skipDuplicates: true // Acts like an upsert: ignores it if the submissionKey already exists
+        });
     }
     
     log("post_func.js", "post_solved_problems", "Request resolved");
@@ -234,8 +211,12 @@ async function postnewuser(userid,platforms,lcdata,cfdata){
             cfdata.unique_problems,
             cfdata.solved_problems
         );
+        
 
-    });
+    },{
+            maxWait: 10000, // 10 seconds to wait for a database connection
+            timeout: 30000  // 30 seconds before the entire transaction times out
+        });
     // console.error(err);
     log("post_func.js","postnewuser","Request resolved");
 
