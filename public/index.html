@@ -1,33 +1,69 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-    <div class = "home-page">
-    <head>
-        <meta charset="UTF-8">
-        <meta name = "viewport" content="width=device-width,
-        initial-scale=1.0">
-        <title>CodeTrack - A single website to track your solved problems</title>
-        
-        <!--  custom css file -->
-        <link rel="stylesheet" href="css/style.css">
-    </head>
-    <div class="header">
-        CodeTrack      
-        <a class="hp1" href = "index.html">home</a>
-        <a class="ap1" href = "about.html">about</a>
-        <a class = "lp1" href = "login.html">login</a>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="/operations-assets/favicon.svg" type="image/svg+xml">
+  <title>CodeTrack · Operations</title>
+  <link rel="stylesheet" href="/operations-assets/dashboard.css">
+  <script src="/operations-assets/dashboard.js" defer></script>
+</head>
+<body>
+  <section id="signin" class="signin-shell">
+    <div class="signin-story"><a class="brand" href="/admin/logs"><span class="brand-mark">C</span> CodeTrack <span class="brand-sub">/ Operations</span></a>
+      <div><p class="eyebrow">BEHIND THE REQUEST</p><h1>A clearer view of<br>your application.</h1><p>Follow requests, investigate failures, and understand what happened—one event at a time.</p></div>
+      <p class="scope-note">Private operations console · Recent history per instance</p>
     </div>
-    <body>
-        <div class="intro">
-            <h2>
-                <img class = "notepad"src="images\notepad-svgrepo-com.svg" width="30">
-                DSA Daily Tracker
-            </h2>
-            <p class="intro_text">Track your solved problems and store the problems you have solved.
-            </p>
-            <p class = "intro_text"> Start now by signing up here <form action = '/register.html' method = "GET"> <input class="sign_up" type = "submit" value = "Sign up"> </form>
-            </p>
-            <p class = "intro_text">Already have an account? Log in here <form action = '/login.html' method = "GET"> <input class="log_in" type = "submit" value="Log in"> </form></p>
+    <div class="signin-form-wrap"><form id="signin-form" class="signin-form">
+      <span class="section-kicker">ADMINISTRATOR ACCESS</span><h2>Sign in to operations</h2>
+      <p>Use your existing CodeTrack account. Only accounts granted operations access can view logs.</p>
+      <label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="username" maxlength="225" required>
+      <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required>
+      <p id="signin-error" role="alert" class="error-message"></p>
+      <button id="signin-button" class="primary" type="submit">Open operations <span aria-hidden="true">↗</span></button>
+      <p class="small">This session stays in this tab’s memory. Reloading the page signs you out of this console.</p>
+    </form></div>
+  </section>
+
+  <div id="console" hidden>
+    <header class="topbar"><a class="brand" href="/admin/logs"><span class="brand-mark">C</span> CodeTrack <span class="brand-sub">/ Operations</span></a>
+      <div class="header-actions"><span id="connection" class="connection">Connecting</span><button id="signout" class="quiet">Sign out</button></div>
+    </header>
+    <main class="workspace">
+      <section class="page-heading"><div><p class="eyebrow">APPLICATION OBSERVABILITY</p><h1>Every request. A clearer picture.</h1><p class="muted">Inspect recent traffic and follow the details behind a failure.</p></div>
+        <div class="refresh-actions"><button id="pause" class="secondary">Pause updates</button><button id="refresh" class="primary">↻ Refresh</button></div>
+      </section>
+      <div class="instance-line"><span id="instance">Instance —</span><span id="started">Started —</span><span id="updated">Not yet refreshed</span></div>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <section class="metrics" aria-label="Request summary for retained events">
+        <article class="metric"><span>Completed requests</span><strong id="metric-requests">—</strong><small>One count per HTTP request</small></article>
+        <article class="metric"><span>Server failures <b class="tiny-label">5xx</b></span><strong id="metric-failures">—</strong><small>Requests the server could not fulfill</small></article>
+        <article class="metric"><span>Client errors <b class="tiny-label">4xx</b></span><strong id="metric-client">—</strong><small>Includes validation and access failures</small></article>
+        <article class="metric"><span>Average response time</span><strong id="metric-duration">—</strong><small>Across retained completed requests</small></article>
+      </section>
+      <section class="filter-panel" aria-label="Filter history">
+        <div class="filter-heading"><div><h2>Find an event</h2><p>Search a route, request ID, event name, or diagnostic code.</p></div><button id="reset-filters" class="quiet">Reset filters</button></div>
+        <form id="filters"><div class="search-row"><label class="search-field" for="search"><span class="sr-only">Search history</span><input id="search" type="search" placeholder="Search requests and events…" maxlength="160"></label><label>Route contains<input id="route-filter" type="text" placeholder="e.g. /login" maxlength="160"></label></div>
+          <div class="filter-grid">
+            <label>Level<select id="level"><option value="">All levels</option><option>info</option><option>warn</option><option>error</option><option>debug</option></select></label>
+            <label>HTTP status<select id="status"><option value="">All statuses</option><option value="2">2xx · Success</option><option value="3">3xx · Redirect</option><option value="4">4xx · Client error</option><option value="5">5xx · Server error</option></select></label>
+            <label>Method<select id="method"><option value="">All methods</option><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>OPTIONS</option><option>HEAD</option></select></label>
+            <label>Type<select id="type"><option value="">All event types</option></select></label>
+            <label>Time window<select id="since"><option value="0">All retained</option><option value="5">Last 5 minutes</option><option value="15">Last 15 minutes</option><option value="60">Last hour</option></select></label>
+            <label>Sort order<select id="sort"><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></label>
+          </div>
+        </form>
+      </section>
+      <section class="history-panel" aria-label="Event history">
+        <div class="history-heading"><div class="tabs" role="tablist" aria-label="History view"><button id="requests-tab" role="tab" aria-selected="true" aria-controls="history-content">Request history</button><button id="events-tab" role="tab" aria-selected="false" aria-controls="history-content" tabindex="-1">All events</button></div><span id="result-count" class="muted" aria-live="polite">0 results</span></div>
+        <div id="history-content" role="tabpanel" aria-labelledby="requests-tab"><div class="table-scroll"><table><caption class="sr-only">Filtered history. Open a request ID to inspect details.</caption><thead><tr><th>Time <span class="muted">· local</span></th><th>Level</th><th>Status</th><th>Method / route</th><th>Request ID</th><th>Type</th><th>Duration</th></tr></thead><tbody id="history-rows"></tbody></table></div>
+          <div id="empty-state" class="empty-state" hidden><strong>No matching events</strong><p>Try another filter, or make a request to the application and refresh.</p></div>
         </div>
-    </body>
-    </div>
+        <div class="history-footer"><span id="page-info" class="muted">Page 1 of 1</span><div><button id="previous" class="secondary">← Previous</button><button id="next" class="secondary">Next →</button></div></div>
+      </section>
+      <footer class="scope-footer"><span id="retention">Latest events from this instance only.</span><span>History resets on restart. Successful console reads are excluded.</span></footer>
+    </main>
+  </div>
+  <dialog id="details" class="details-dialog" aria-labelledby="details-title"><div class="details-heading"><div><p class="eyebrow">REQUEST INSPECTOR</p><h2 id="details-title">Event details</h2></div><button id="close-details" class="secondary" aria-label="Close event details">Close ×</button></div><p id="details-description" class="muted"></p><dl id="detail-fields"></dl><h3>Related events</h3><p class="small muted">Events sharing this request ID within the retained snapshot.</p><ol id="related-events" class="timeline"></ol></dialog>
+</body>
 </html>

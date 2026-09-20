@@ -7,6 +7,7 @@ const log = require('./utils/logger');
 const HttpError = require('./utils/httpError');
 const { getErrorDiagnosticCode } = require('./utils/errorDiagnostics');
 const { router } = require('./routes/api.routes');
+const { adminRouter } = require('./routes/admin.routes');
 
 const app = express();
 app.disable('x-powered-by');
@@ -14,17 +15,26 @@ app.use((req, res, next) => {
     req.requestId = randomUUID();
     res.setHeader('X-Request-Id', req.requestId);
     const requestStartedAtMs = Date.now();
-    res.on('finish', () => log.info('http_request', {
-        requestId: req.requestId, method: req.method,
-        // Route templates only: never log raw URLs, query strings or user IDs.
-        route: req.route?.path || 'unmatched',
-        status: res.statusCode, durationMs: Date.now() - requestStartedAtMs
-    }));
+    res.on('finish', () => {
+        if (req.isOperationsRequest && res.statusCode < 400) return;
+        const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
+        log[level]('http_request', {
+            requestId: req.requestId, method: req.method,
+            // Route templates only: never log raw URLs, query strings or user IDs.
+            route: req.route?.path || 'unmatched',
+            status: res.statusCode, durationMs: Date.now() - requestStartedAtMs
+        });
+    });
     next();
 });
 const allowedOrigins = (process.env.CORS_ORIGINS ||
     'http://localhost:5173,chrome-extension://ekefiaamkelcgkfpmpohnbahldohakga')
-    .split(',').map(origin => origin.trim()).filter(Boolean);
+    .split(',').map(origin => origin.trim().replace(/\/$/, '')).filter(Boolean);
+// Explicit deployment configuration, not an untrusted request Host header.
+for (const origin of [process.env.ADMIN_ORIGIN, process.env.RENDER_EXTERNAL_URL]) {
+    if (origin) allowedOrigins.push(new URL(origin).origin);
+}
+if (process.env.NODE_ENV !== 'production') allowedOrigins.push('http://localhost:3000');
 app.use(cors({
     origin(origin, callback) {
         if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
@@ -36,14 +46,23 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
-// Serve only deliberate public assets. Never expose dataset JSON files.
+// These are static UI assets only. Log data lives behind authenticate + requireAdmin.
 const publicRoot = path.join(__dirname, 'public');
-app.use('/css', express.static(path.join(publicRoot, 'css'), { dotfiles: 'deny', index: false }));
-app.use('/images', express.static(path.join(publicRoot, 'images'), { dotfiles: 'deny', index: false }));
-for (const page of ['index', 'login', 'register', 'about']) {
-    app.get(page === 'index' ? ['/', '/index.html'] : '/' + page + '.html',
-        (req, res) => res.sendFile(path.join(publicRoot, page + '.html')));
+function operationsHeaders(req, res, next) {
+    req.isOperationsRequest = true;
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+    next();
 }
+app.get(['/', '/index.html', '/admin/logs'], operationsHeaders,
+    (req, res) => res.sendFile(path.join(publicRoot, 'index.html')));
+app.use('/operations-assets', operationsHeaders,
+    express.static(path.join(publicRoot, 'operations'), { dotfiles: 'deny', index: false }));
+// Retired legacy application pages now lead to the operations sign-in page.
+app.get(['/login.html', '/register.html', '/about.html'], (req, res) => res.redirect('/admin/logs'));
+app.use('/api/admin', adminRouter);
 app.use('/api', router);
 app.use((req, res) => res.status(404).json({ success: false, message: 'Page or endpoint not found.' }));
 app.use((error, req, res, next) => {
