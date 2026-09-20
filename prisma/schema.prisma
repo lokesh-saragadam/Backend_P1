@@ -2,7 +2,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
@@ -16,106 +15,68 @@ enum Difficulty {
 }
 
 model User {
-  userid     Int      @id @default(autoincrement())
-  username   String   @unique @db.VarChar(100)
-  password   String   @db.VarChar(100)
-  email      String   @unique @db.VarChar(225)
-  created_at DateTime @default(now())
-
-  user_handles UserHandle[]
+  userId       Int          @id @default(autoincrement()) @map("userid")
+  username     String       @unique @db.VarChar(100)
+  passwordHash String       @map("password") @db.VarChar(100)
+  email        String       @unique @db.VarChar(225)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  userHandles  UserHandle[]
   submissions  Submission[]
 }
 
 model Platform {
-  platformid Int    @id @default(autoincrement())
-  name       String @unique @db.VarChar(100)
-
-  user_handles UserHandle[]
-  problems     Problem[]
+  platformId  Int          @id @default(autoincrement()) @map("platformid")
+  name        String       @unique @db.VarChar(100)
+  userHandles UserHandle[]
+  problems    Problem[]
 }
 
 model UserHandle {
-  handleid Int @id @default(autoincrement())
+  userHandleId  Int      @id @default(autoincrement()) @map("handleid")
+  userId        Int      @map("userid")
+  platformId    Int      @map("platformid")
+  handle        String   @db.VarChar(100)
+  contestRating Int?     @map("rating")
+  user          User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  platform      Platform @relation(fields: [platformId], references: [platformId], onDelete: Cascade)
 
-  userid     Int
-  platformid Int
-
-  handle String @db.VarChar(100)
-  rating Int?
-
-  user     User     @relation(fields: [userid], references: [userid], onDelete: Cascade)
-  platform Platform @relation(fields: [platformid], references: [platformid], onDelete: Cascade)
-
-  @@unique([userid, platformid])
-  @@unique([platformid, handle])
+  @@unique([userId, platformId])
+  @@unique([platformId, handle])
 }
 
 model Problem {
-  problemid Int @id @default(autoincrement())
+  problemId         Int          @id @default(autoincrement()) @map("problemid")
+  platformId        Int          @map("platformid")
+  platformProblemId String       @map("problemcode") @db.VarChar(100)
+  title             String       @map("problemtitle") @db.VarChar(255)
+  titleSlug         String?      @db.VarChar(255)
+  difficulty        Difficulty?
+  problemRating     Int?         @map("rating")
+  tags              String[]
+  platform          Platform     @relation(fields: [platformId], references: [platformId], onDelete: Cascade)
+  submissions       Submission[]
 
-  platformid Int
-
-  // Platform-specific problem identifier
-  // LeetCode: "1"
-  // Codeforces: "4A"
-  problemcode String @db.VarChar(100)
-
-  problemtitle String @db.VarChar(255)
-
-  // LeetCode: two-sum
-  // Codeforces: nullable if not applicable
-  // titleSlug String? @db.VarChar(255)
-
-  difficulty Difficulty?
-  rating     Int?
-
-  tags String[]
-
-  platform    Platform     @relation(fields: [platformid], references: [platformid], onDelete: Cascade)
-  submissions Submission[]
-
-  @@unique([platformid, problemcode])
-  @@index([platformid])
+  @@unique([platformId, platformProblemId])
+  @@unique([platformId, titleSlug])
+  @@index([platformId])
 }
 
 model Submission {
-  id Int @id @default(autoincrement())
+  submissionId         Int     @id @default(autoincrement()) @map("id")
+  userId               Int     @map("userid")
+  problemId            Int     @map("problemid")
+  platformSubmissionId String? @db.VarChar(100)
+  verdict              String  @map("statusDisplay") @db.VarChar(50)
+  language             String? @db.VarChar(50)
+  submittedAtMs        BigInt  @map("timestamp")
+  deduplicationKey      String  @unique @map("submissionKey") @db.VarChar(255)
+  user                 User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  problem              Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
 
-  userid   Int
-  problemid Int
-
-  statusDisplay String @db.VarChar(50)
-  language      String? @db.VarChar(50)
-
-  timestamp BigInt
-
-  // Deterministic identifier used to prevent duplicate imports.
-  // Later, if the platform gives us an actual submission ID,
-  // this can be replaced/extended.
-  submissionKey String @unique @db.VarChar(255)
-
-  user    User    @relation(fields: [userid], references: [userid], onDelete: Cascade)
-  problem Problem @relation(fields: [problemid], references: [problemid], onDelete: Cascade)
-
-  @@index([userid])
-  @@index([problemid])
-  @@index([userid, timestamp])
-  @@index([problemid, statusDisplay])
+  @@unique([userId, problemId, platformSubmissionId])
+  @@index([userId])
+  @@index([problemId])
+  @@index([userId, submittedAtMs])
+  @@index([problemId, verdict])
 }
 
-//model ProblemMetadata {
-//  id                 Int      @id @default(autoincrement())
-  //problemid          Int      @unique
-  //problem            Problem  @relation(fields: [problemid], references: [problemid], onDelete: Cascade)
-  
-  // Storing structured data as JSON arrays
-  //patterns           Json     // [{ name: string, confidence: number }]
-  //concepts           Json     // [{ name: string, confidence: number }]
-  //prerequisites      Json     // [{ name: string, confidence: number }]
-  //learningObjectives String[]
-
-  //classifiedAt       DateTime @default(now())
-  //updatedAt          DateTime @updatedAt
-
- // @@index([problemid])
-//}

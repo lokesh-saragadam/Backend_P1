@@ -2,7 +2,7 @@
  * dashboard/service.js
  **/
 
-const { prisma } = require('../database/db')
+const { prisma } = require('../database/client')
 const log = require("../utils/logger");
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -12,25 +12,25 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * ============================================================ */
 
 /**
- * Total number of UNIQUE problems a user has solved.
+ * Total number of UNIQUE problems a user has attempted.
  */
-async function getTotalSolvedCount(userId) {
-  const uniqueSubmissions = await prisma.submission.findMany({
-    where: { userid: userId },
-    distinct: ['problemid'], // Ensures we don't double-count multiple submissions for the same problem
-    select: { problemid: true }
+async function getUniqueAttemptedProblemCount(userId) {
+  const attemptedProblems = await prisma.submission.findMany({
+    where: { userId: userId },
+    distinct: ['problemId'], // Ensures we don't double-count multiple submissions for the same problem
+    select: { problemId: true }
   });
-  return uniqueSubmissions.length;
+  return attemptedProblems.length;
 }
 
 /**
- * Solved counts grouped by difficulty in a single query.
+ * Attempted counts grouped by difficulty in a single query.
  */
-async function getSolvedCountsByDifficulty(userId) {
-  // Fetch unique solved problems and their difficulties
-  const solved = await prisma.submission.findMany({
-    where: { userid: userId },
-    distinct: ['problemid'],
+async function getAttemptedProblemCountsByDifficulty(userId) {
+  // Fetch unique attempted problems and their difficulties
+  const attemptedProblems = await prisma.submission.findMany({
+    where: { userId: userId },
+    distinct: ['problemId'],
     select: {
       problem: {
         select: { difficulty: true },
@@ -39,7 +39,7 @@ async function getSolvedCountsByDifficulty(userId) {
   });
 
   const counts = { Easy: 0, Medium: 0, Hard: 0 };
-  for (const { problem } of solved) {
+  for (const { problem } of attemptedProblems) {
     if (problem?.difficulty && counts[problem.difficulty] !== undefined) {
       counts[problem.difficulty]++;
     }
@@ -48,46 +48,46 @@ async function getSolvedCountsByDifficulty(userId) {
 }
 
 /**
- * Solved counts grouped by rating.
+ * Attempted counts grouped by problemRating.
  */
-async function getSolvedCountsByRating(userId) {
-  const solved = await prisma.submission.findMany({
-    where: { userid: userId },
-    distinct: ['problemid'],
+async function getAttemptedProblemCountsByRating(userId) {
+  const attemptedProblems = await prisma.submission.findMany({
+    where: { userId: userId },
+    distinct: ['problemId'],
     select: {
       problem: {
-        select: { rating: true },
+        select: { problemRating: true },
       },
     },
   });
 
   const counts = {}; 
-  for (const { problem } of solved) {
-    const rating = problem?.rating;
+  for (const { problem } of attemptedProblems) {
+    const problemRating = problem?.problemRating;
     
-    if (typeof rating === 'number' && rating >= 800) {
-      counts[Number(rating)] = (counts[rating] || 0) + 1;
+    if (typeof problemRating === 'number' && problemRating >= 800) {
+      counts[Number(problemRating)] = (counts[problemRating] || 0) + 1;
     }
   }
   return counts;
 }
 
 /**
- * Fetch every distinct calendar date on which the user solved a problem.
+ * Fetch every distinct calendar date on which the user attempted a problem.
  */
-async function getDistinctSolvedDates(userId) {
+async function getActivityDates(userId) {
   const rows = await prisma.submission.findMany({
     where: {
-      userid: userId,
+      userId: userId,
     },
-    select: { timestamp: true },
-    orderBy: { timestamp: 'desc' },
+    select: { submittedAtMs: true },
+    orderBy: { submittedAtMs: 'desc' },
   });
 
   const dateSet = new Set();
   for (const row of rows) {
-    // Convert BigInt timestamp to Date object
-    const dateObj = new Date(Number(row.timestamp));
+    // Convert BigInt submittedAtMs to Date object
+    const dateObj = new Date(Number(row.submittedAtMs));
     dateSet.add(toDateOnlyString(dateObj));
   }
 
@@ -95,19 +95,19 @@ async function getDistinctSolvedDates(userId) {
 }
 
 /**
- * Tags / topics grouped by solved problem.
+ * Tags / topics grouped by attempted problem.
  */
-async function getSolvedCountByTopic(userId){
-  const uniqueSubmissions = await prisma.submission.findMany({
-    where:{ userid: userId },
-    distinct: ['problemid'],
-    select: { problemid: true }
+async function getAttemptedProblemCountsByTopic(userId){
+  const attemptedProblems = await prisma.submission.findMany({
+    where:{ userId: userId },
+    distinct: ['problemId'],
+    select: { problemId: true }
   });
 
-  const taggedData = await prisma.problem.groupBy({
-    by: ['tags'],
+  const taggedData = await prisma.problem.findMany({
+    select: { tags: true },
     where: {
-      problemid: { in: uniqueSubmissions.map(p => p.problemid) },
+      problemId: { in: attemptedProblems.map(p => p.problemId) },
     }
   });
 
@@ -120,22 +120,22 @@ async function getSolvedCountByTopic(userId){
 }
 
 /**
- * Grouped solved counts by month/year.
+ * Grouped attempted counts by month/year.
  */
-async function getSolvedByMonths(userId){
+async function getSubmissionCountsByMonth(userId){
   const rows = await prisma.submission.findMany({
     where: {
-      userid: userId,
+      userId: userId,
     },
-    select: { timestamp: true },
-    orderBy: { timestamp: 'desc' },
+    select: { submittedAtMs: true },
+    orderBy: { submittedAtMs: 'desc' },
   });
 
   return rows.reduce((acc, row) => {
     // Convert BigInt to standard Date object
-    const date = new Date(Number(row.timestamp)); 
+    const date = new Date(Number(row.submittedAtMs)); 
     
-    const monthYear = date.toLocaleString('default', { 
+    const monthYear = date.toLocaleString('en-US', { timeZone: 'UTC', 
       month: 'long', 
       year: 'numeric' 
     });
@@ -153,7 +153,7 @@ async function getSolvedByMonths(userId){
  */
 async function getConnectedPlatformsCount(userId) {
   return prisma.userHandle.count({
-    where: { userid: userId },
+    where: { userId: userId },
   });
 }
 
@@ -162,44 +162,44 @@ async function getConnectedPlatformsCount(userId) {
  */
 async function getConnectedPlatformNames(userId) {
   const handles = await prisma.userHandle.findMany({
-    where: { userid: userId },
+    where: { userId: userId },
     select: { platform: { select: { name: true } } },
   });
   return handles.map((h) => h.platform.name);
 }
 
 /**
- * Most recent solved-problem timestamp.
+ * Most recent attempted-problem submittedAtMs.
  */
-async function getLastSolvedTimestamp(userId) {
+async function getLastSubmissionTimestamp(userId) {
   const latest = await prisma.submission.findFirst({
-    where: { userid: userId, },
-    orderBy: { timestamp: 'desc' },
-    select: { timestamp: true },
+    where: { userId: userId, },
+    orderBy: { submittedAtMs: 'desc' },
+    select: { submittedAtMs: true },
   });
   
   // Convert BigInt back to Date for the relative time formatter
-  return latest?.timestamp ? new Date(Number(latest.timestamp)) : null;
+  return latest?.submittedAtMs ? new Date(Number(latest.submittedAtMs)) : null;
 }
 
 /**
  * Activity Heatmap data.
  */
-async function getDailycounts(userId){
+async function getSubmissionCountsByDate(userId){
   const rows = await prisma.submission.findMany({
     where: {
-      userid: userId, 
+      userId: userId, 
     },
     orderBy: {
-      timestamp: 'desc',
+      submittedAtMs: 'desc',
     },
     select: {
-      timestamp: true,
+      submittedAtMs: true,
     }
   });
 
   return rows.reduce((accumulator, record) => {
-    const dateObj = new Date(Number(record.timestamp));
+    const dateObj = new Date(Number(record.submittedAtMs));
     const dateStr = dateObj.toISOString().split('T')[0];
 
     if (!accumulator[dateStr]) {
@@ -211,23 +211,24 @@ async function getDailycounts(userId){
 }
 
 /**
- * Most recent N solved problems with problem + platform info attached.
+ * Most recent N attempted problems with problem + platform info attached.
  */
 async function getRecentActivity(userId, limit = 10) {
   const rows = await prisma.submission.findMany({
-    where: { userid: userId },
-    orderBy: { timestamp: 'desc' },
+    where: { userId: userId },
+    orderBy: { submittedAtMs: 'desc' },
     take: limit,
     select: {
-      problemid: true,
-      timestamp: true,
-      statusDisplay: true,
+      submissionId: true,
+      problemId: true,
+      submittedAtMs: true,
+      verdict: true,
       language: true,
       problem: {
         select: {
-          problemtitle: true,
+          title: true,
           difficulty: true,
-          rating: true,
+          problemRating: true,
           platform: { select: { name: true } },
         },
       },
@@ -235,14 +236,15 @@ async function getRecentActivity(userId, limit = 10) {
   });
 
   return rows.map((row) => ({
-    problemId: row.problemid,
-    title: row.problem.problemtitle,
+    submissionId: row.submissionId,
+    problemId: row.problemId,
+    title: row.problem.title,
     difficulty: row.problem.difficulty ?? null,
-    rating: row.problem.rating ?? null,
+    problemRating: row.problem.problemRating ?? null,
     platform: row.problem.platform.name,
     language: row.language,
-    status: row.statusDisplay, // Map schema field to expected object property
-    solvedAt: new Date(Number(row.timestamp)), // Convert BigInt to Date
+    verdict: row.verdict,
+    submittedAt: new Date(Number(row.submittedAtMs)), // Convert BigInt to Date
   }));
 }
 
@@ -251,92 +253,88 @@ async function getRecentActivity(userId, limit = 10) {
  * ------------------------------------------------------------ */
 
 /**
- * Mark a problem as solved manually.
+ * Mark a problem as attempted manually.
  */
-async function markProblemSolved({
+async function recordManualSubmission({
   userId,
   problemId,
   status = 'Accepted',
   language = null,
-  solvedAt = new Date(),
+  submittedAt = new Date(),
 }) {
-  log("dashboard.js","markProblemSolved","Request received");
+  log("dashboard.service.js","recordManualSubmission","Request received");
   
-  const unixTimestamp = BigInt(new Date(solvedAt).getTime());
-  const submissionKey = `${userId}_${problemId}_${unixTimestamp.toString()}`;
+  const unixTimestamp = BigInt(new Date(submittedAt).getTime());
+  const deduplicationKey = `${userId}_${problemId}_${unixTimestamp.toString()}`;
 
   const res = await prisma.submission.upsert({
     where: {
-      submissionKey: submissionKey
+      deduplicationKey: deduplicationKey
     },
     update: { 
-      statusDisplay: status, 
+      verdict: status, 
       language: language 
     },
     create: {
-      userid: userId,
-      problemid: problemId,
-      statusDisplay: status,
+      userId: userId,
+      problemId: problemId,
+      verdict: status,
       language: language,
-      timestamp: unixTimestamp,
-      submissionKey: submissionKey
+      submittedAtMs: unixTimestamp,
+      deduplicationKey: deduplicationKey
     },
   });
   
-  log("dashboard.js","markProblemSolved","Request resolved");
+  log("dashboard.js","recordManualSubmission","Request resolved");
   return res;
 }
 
 /**
- * Undo a solved-problem record. Because Submissions allow multiple 
+ * Undo a attempted-problem record. Because Submissions allow multiple 
  * records per problem, this deletes ALL submissions for that problem by that user.
  */
-async function unmarkProblemSolved(userId, problemId) {
-  log("dashboard.js","unmarkProblemSolved","Request received");
+async function deleteProblemSubmissions(userId, problemId) {
+  log("dashboard.js","deleteProblemSubmissions","Request received");
   
   const res = await prisma.submission.deleteMany({
     where: { 
-        userid: userId, 
-        problemid: problemId 
+        userId: userId, 
+        problemId: problemId 
     },
   });
   
-  log("dashboard.js","unmarkProblemSolved","Request resolved");
+  log("dashboard.js","deleteProblemSubmissions","Request resolved");
   return res;
 }
 
-// ... upsertProblem, addUserHandle, updateUserHandleRating, removeUserHandle 
-// and the rest of the utility functions remain exactly the same as your original file ...
-
-// (The remaining code is unchanged, skipped here to keep the response concise.)
 /**
  * Create or update a Problem row (e.g. when syncing problems in from a
- * platform's API). Unique on [platformid, problemcode].
+ * platform's API). Unique on [platformId, platformProblemId].
  */
 async function upsertProblem({
   platformId,
-  problemCode,
-  problemTitle,
+  platformProblemId,
+  title,
   difficulty = null, // Difficulty enum, LeetCode only
-  rating = null, // Codeforces only
+  problemRating = null, // Codeforces only
   tags = [],
 }) {
     log("dashboard.js","upsertProblem","Request recieved");
 
   return prisma.problem.upsert({
     where: {
-      platformid_problemcode: {
-        platformid: platformId,
-        problemcode: problemCode,
+      platformId_platformProblemId: {
+        platformId: platformId,
+        platformProblemId: platformProblemId,
       },
     },
-    update: { problemtitle: problemTitle, difficulty, rating, tags },
+    update: { title: title, difficulty, problemRating, tags },
     create: {
-      platformid: platformId,
-      problemcode: problemCode,
-      problemtitle: problemTitle,
+      platformId: platformId,
+      platformProblemId: platformProblemId,
+      title: title,
       difficulty,
-      rating,
+      problemRating,
       tags,
     },
   });
@@ -345,36 +343,36 @@ async function upsertProblem({
  
 /**
  * Connect a new platform handle for a user (e.g. linking their
- * LeetCode username). Unique on [userid, platformid].
+ * LeetCode username). Unique on [userId, platformId].
  */
-async function addUserHandle({ userId, platformId, handle, rating = null }) {
+async function addUserHandle({ userId, platformId, handle, contestRating = null }) {
   return prisma.userHandle.create({
     data: {
-      userid: userId,
-      platformid: platformId,
+      userId: userId,
+      platformId: platformId,
       handle,
-      rating,
+      contestRating,
     },
   });
 }
  
 /**
- * Update the cached rating for an existing handle (e.g. after a
- * periodic sync pulls the user's latest Codeforces rating).
+ * Update the cached contestRating for an existing handle (e.g. after a
+ * periodic sync pulls the user's latest Codeforces contestRating).
  */
-async function updateUserHandleRating(handleId, rating) {
+async function updateUserHandleRating(userHandleId, contestRating) {
   return prisma.userHandle.update({
-    where: { handleid: handleId },
-    data: { rating },
+    where: { userHandleId: userHandleId },
+    data: { contestRating },
   });
 }
  
 /**
  * Disconnect a platform handle.
  */
-async function removeUserHandle(handleId) {
+async function removeUserHandle(userHandleId) {
   return prisma.userHandle.delete({
-    where: { handleid: handleId },
+    where: { userHandleId: userHandleId },
   });
 }
  
@@ -402,18 +400,18 @@ function subtractDays(dateString, days) {
 /**
  * Current streak, per the spec:
  *   today = today's date
- *   while solved(today): streak++, today -= 1 day
- * If the user hasn't solved anything today, the streak is 0
+ *   while attempted(today): streak++, today -= 1 day
+ * If the user hasn't submitted anything today, the streak is 0
  * (no grace day — matches the algorithm as given).
  *
- * @param {string[]} solvedDatesDesc - distinct solved dates, "YYYY-MM-DD", descending
+ * @param {string[]} activityDatesDesc - distinct attempted dates, "YYYY-MM-DD", descending
  */
-function calculateCurrentStreak(solvedDatesDesc) {
-  const solvedSet = new Set(solvedDatesDesc);
+function calculateCurrentStreak(activityDatesDesc) {
+  const activityDateSet = new Set(activityDatesDesc);
   let streak = 0;
   let cursor = toDateOnlyString(new Date());
  
-  while (solvedSet.has(cursor)) {
+  while (activityDateSet.has(cursor)) {
     streak++;
     cursor = subtractDays(cursor, 1);
   }
@@ -422,16 +420,16 @@ function calculateCurrentStreak(solvedDatesDesc) {
 }
  
 /**
- * Longest streak ever, found by scanning the full solved-date history
+ * Longest streak ever, found by scanning the full attempted-date history
  * once and tracking the longest run of consecutive calendar days.
  *
- * @param {string[]} solvedDatesDesc - distinct solved dates, "YYYY-MM-DD", descending
+ * @param {string[]} activityDatesDesc - distinct attempted dates, "YYYY-MM-DD", descending
  */
-function calculateLongestStreak(solvedDatesDesc) {
-  if (solvedDatesDesc.length === 0) return 0;
+function calculateLongestStreak(activityDatesDesc) {
+  if (activityDatesDesc.length === 0) return 0;
  
   // Work ascending so we can walk forward day-by-day.
-  const datesAsc = [...solvedDatesDesc].reverse();
+  const datesAsc = [...activityDatesDesc].reverse();
  
   let longest = 1;
   let current = 1;
@@ -478,28 +476,28 @@ function formatRelativeTime(date) {
  
 /**
  * Builds the "overview" section of the dashboard response:
- * totals, difficulty breakdown, streaks, platforms, last sync.
+ * totals, difficulty breakdown, streaks, platforms, last submission.
  */
 async function getDashboardOverview(userId) {
-  const [totalSolved, difficultyCounts,ratingCounts, solvedDates, platformsConnected, lastSolvedAt] =
+  const [uniqueAttemptedProblems, difficultyCounts,problemCountsByRating, activityDates, platformsConnected, lastSubmissionAt] =
     await Promise.all([
-      getTotalSolvedCount(userId),
-      getSolvedCountsByDifficulty(userId),
-      getSolvedCountsByRating(userId),
-      getDistinctSolvedDates(userId),
+      getUniqueAttemptedProblemCount(userId),
+      getAttemptedProblemCountsByDifficulty(userId),
+      getAttemptedProblemCountsByRating(userId),
+      getActivityDates(userId),
       getConnectedPlatformsCount(userId),
-      getLastSolvedTimestamp(userId),
+      getLastSubmissionTimestamp(userId),
     ]);
   return {
-    totalSolved,
+    uniqueAttemptedProblems,
     easy: difficultyCounts.Easy,
     medium: difficultyCounts.Medium,
     hard: difficultyCounts.Hard,
-    ratingCounts: ratingCounts,
-    currentStreak: calculateCurrentStreak(solvedDates),
-    longestStreak: calculateLongestStreak(solvedDates),
+    problemCountsByRating: problemCountsByRating,
+    currentStreak: calculateCurrentStreak(activityDates),
+    longestStreak: calculateLongestStreak(activityDates),
     platformsConnected,
-    lastSync: formatRelativeTime(lastSolvedAt),
+    lastSubmissionAtRelative: formatRelativeTime(lastSubmissionAt),
   };
 }
  
@@ -517,12 +515,12 @@ async function getDashboardData(userId, { recentActivityLimit = 10 } = {}) {
  
   const recentActivity = recentActivityRaw.map((item) => ({
     ...item,
-    solvedAtRelative: formatRelativeTime(item.solvedAt),
+    submittedAtRelative: formatRelativeTime(item.submittedAt),
   }));
-  const SolvedAtMonths = await getSolvedByMonths(userId);
-  const TopicWiseSolved = await getSolvedCountByTopic(userId);
-  const DailyCounts = await getDailycounts(userId);
-  return { overview, recentActivity ,SolvedAtMonths,TopicWiseSolved,DailyCounts};
+  const submissionCountsByMonth = await getSubmissionCountsByMonth(userId);
+  const attemptedProblemCountsByTopic = await getAttemptedProblemCountsByTopic(userId);
+  const submissionCountsByDate = await getSubmissionCountsByDate(userId);
+  return { overview, recentActivity ,submissionCountsByMonth,attemptedProblemCountsByTopic,submissionCountsByDate};
 }
  
 /* ============================================================
@@ -531,18 +529,19 @@ async function getDashboardData(userId, { recentActivityLimit = 10 } = {}) {
  
 module.exports = {
   // Repository layer (pure data access)
-  getTotalSolvedCount,
-  getSolvedCountsByDifficulty,
-  getSolvedCountsByRating,
-  getDistinctSolvedDates,
-  getSolvedByMonths,
-  getDailycounts,
+  getUniqueAttemptedProblemCount,
+  getAttemptedProblemCountsByDifficulty,
+  getAttemptedProblemCountsByTopic,
+  getAttemptedProblemCountsByRating,
+  getActivityDates,
+  getSubmissionCountsByMonth,
+  getSubmissionCountsByDate,
   getConnectedPlatformsCount,
   getConnectedPlatformNames,
-  getLastSolvedTimestamp,
+  getLastSubmissionTimestamp,
   getRecentActivity,
-  markProblemSolved,
-  unmarkProblemSolved,
+  recordManualSubmission,
+  deleteProblemSubmissions,
   upsertProblem,
   addUserHandle,
   updateUserHandleRating,

@@ -1,3 +1,4 @@
+const appLog = require('../../utils/logger.js');
 const { z } = require("zod");
 const OpenAI = require("openai");
 const dotenv = require("dotenv").config();
@@ -150,7 +151,7 @@ Classify the following problem.
 PROBLEM
 
 Title:
-${problem.problemtitle || "N/A"}
+${problem.title || "N/A"}
 
 Difficulty:
 ${problem.difficulty || "N/A"}
@@ -239,15 +240,15 @@ async function classifySingleProblem(problem) {
     // Validate with Zod before returning
     const validatedData = ProblemMetadataSchema.parse(parsedJson);
     return {
-      problemid: problem.problemid,
+      problemId: problem.problemId,
       metadata: validatedData,
       success: true,
     };
   } catch (error) {
-    console.error(`Failed to classify problem ID ${problem.problemid}:`, error.message);
+    appLog.error('operation_failed', { route: 'BackendAPI/services/llm/problemEnrichment.js' });
     return {
-      problemid: problem.problemid,
-      error: error.message,
+      problemId: problem.problemId,
+      error: 'Problem classification failed.',
       success: false,
     };
   }
@@ -267,7 +268,6 @@ async function batchClassifyProblems(problems, batchSize = 5, delayBetweenBatche
 
   for (let i = 0; i < problems.length; i += batchSize) {
     const chunk = problems.slice(i, i + batchSize);
-    console.log(`Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(problems.length / batchSize)} (${chunk.length} problems)...`);
 
     // Execute API calls in parallel for current batch
     const batchPromises = chunk.map((problem) => classifySingleProblem(problem));
@@ -280,7 +280,7 @@ async function batchClassifyProblems(problems, batchSize = 5, delayBetweenBatche
         // TODO: Save result.value.metadata to your database (e.g. Prisma)
         // await prisma.problemMetadata.upsert(...)
       } else {
-        allResults.push({ error: result.reason, success: false });
+        allResults.push({ error: 'Problem classification failed.', success: false });
       }
     }
 
@@ -306,8 +306,8 @@ async function main() {
   // Example placeholder payload
   const sampleProblems = [
     {
-      problemid: 84,
-      problemtitle: "Largest Rectangle in Histogram",
+      problemId: 84,
+      title: "Largest Rectangle in Histogram",
       difficulty: "Hard",
       tags: ["Array", "Stack", "Monotonic Stack"],
       description: "Given an array of integers heights representing the histogram's bar height where the width of each bar is 1, return the area of the largest rectangle in the histogram.",
@@ -315,9 +315,7 @@ async function main() {
     },
   ];
 
-  console.log("Starting classification job...");
   const results = await batchClassifyProblems(sampleProblems, 5, 500);
-  console.log("Classification completed. Sample output:\n", JSON.stringify(results, null, 2));
 }
 
 // Uncomment to run directly:
