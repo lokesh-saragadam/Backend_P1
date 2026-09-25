@@ -14,7 +14,7 @@ async function main() {
                 email: suffix + '@example.test', passwordHash: 'not-a-login-password' } });
             const platform = await tx.platform.create({ data: { name: 'verify-' + suffix } });
             const problem = { platformProblemId: '1', title: 'Synthetic verification problem',
-                titleSlug: 'verification-problem', difficulty: 'Easy', problemRating: null, tags: ['array'] };
+                difficulty: 'Easy', problemRating: null, tags: ['array'] };
             const submittedAtMs = Date.UTC(2026, 0, 1);
             const event = id => ({ platformProblemId: '1', platformSubmissionId: String(id),
                 submittedAtMs, verdict: 'Accepted', language: 'python3' });
@@ -25,10 +25,6 @@ async function main() {
             const storedProblem = await tx.problem.findUnique({ where: {
                 platformId_platformProblemId: { platformId: platform.platformId, platformProblemId: '1' }
             } });
-            // Exercise slug backfill without replacing the existing catalog ID.
-            await tx.problem.update({ where: { problemId: storedProblem.problemId }, data: { titleSlug: null } });
-            await persistPlatformHistory(tx, user.userId, platform.platformId, { problems: [problem], submissions: [] });
-            assert.equal((await tx.problem.findUnique({ where: { problemId: storedProblem.problemId } })).titleSlug, problem.titleSlug);
             const legacyTime = submittedAtMs + 1000;
             const legacy = await tx.submission.create({ data: { userId: user.userId, problemId: storedProblem.problemId,
                 submittedAtMs: BigInt(legacyTime), verdict: 'Accepted', language: 'C++',
@@ -36,7 +32,8 @@ async function main() {
             await persistPlatformHistory(tx, user.userId, platform.platformId, { problems: [],
                 submissions: [{ ...event(3), submittedAtMs: legacyTime }, { ...event(4), submittedAtMs: legacyTime }] });
             assert.equal(await tx.submission.count({ where: { userId: user.userId } }), 4);
-            assert.equal((await tx.submission.findUnique({ where: { submissionId: legacy.submissionId } })).platformSubmissionId, '3');
+            assert.equal((await tx.submission.findUnique({ where: { submissionId: legacy.submissionId } })).deduplicationKey,
+                `native:${user.userId}:${platform.platformId}:3`);
             throw rollback;
         }, { isolationLevel: 'Serializable', timeout: 60000 });
     } catch (error) {

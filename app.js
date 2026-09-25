@@ -28,7 +28,7 @@ app.use((req, res, next) => {
     next();
 });
 const allowedOrigins = (process.env.CORS_ORIGINS ||
-    'http://localhost:5173,chrome-extension://ekefiaamkelcgkfpmpohnbahldohakga')
+    'http://localhost:5173,chrome-extension://ekefiaamkelcgkfpmpohnbahldohakga,chrome-extension://lldijcnenmpoknkpdghinkpefajeffio')
     .split(',').map(origin => origin.trim().replace(/\/$/, '')).filter(Boolean);
 // Explicit deployment configuration, not an untrusted request Host header.
 for (const origin of [process.env.ADMIN_ORIGIN, process.env.RENDER_EXTERNAL_URL]) {

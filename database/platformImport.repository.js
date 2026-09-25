@@ -30,8 +30,7 @@ async function upsertProblems(tx, platformId, problems) {
         for (const problem of batch) {
             const metadata = {
                 title: problem.title, difficulty: problem.difficulty ?? null,
-                problemRating: problem.problemRating ?? null, tags: problem.tags,
-                ...(problem.titleSlug ? { titleSlug: problem.titleSlug } : {})
+                problemRating: problem.problemRating ?? null, tags: problem.tags
             };
             const existingProblem = existingById.get(problem.platformProblemId);
             if (!existingProblem) {
@@ -54,34 +53,33 @@ async function insertSubmissions(tx, userId, platformId, submissions, problemIdB
                 nativeKey: `native:${userId}:${platformId}:${submission.platformSubmissionId}` };
         });
         const existingSubmissions = await tx.submission.findMany({
-            where: { userId, problem: { platformId }, OR: [
-                { deduplicationKey: { in: batch.map(submission => submission.legacyKey) } },
-                { platformSubmissionId: { in: batch.map(submission => submission.platformSubmissionId) } }
-            ] }
+            where: { userId, problem: { platformId },
+                deduplicationKey: { in: batch.flatMap(submission => [submission.nativeKey, submission.legacyKey]) } }
         });
-        const existingByNativeId = new Map(existingSubmissions.filter(row => row.platformSubmissionId)
-            .map(row => [row.platformSubmissionId, row]));
         const existingByKey = new Map(existingSubmissions.map(row => [row.deduplicationKey, row]));
         const pendingInserts = new Map();
+        const claimedLegacyKeys = new Set();
         for (const submission of batch) {
-            const existing = existingByNativeId.get(submission.platformSubmissionId) ||
-                existingByKey.get(submission.legacyKey);
+            const existing = existingByKey.get(submission.nativeKey) ||
+                (!claimedLegacyKeys.has(submission.legacyKey) && existingByKey.get(submission.legacyKey));
             const data = {
-                userId, problemId: submission.problemId, platformSubmissionId: submission.platformSubmissionId,
+                userId, problemId: submission.problemId, deduplicationKey: submission.nativeKey,
                 verdict: submission.verdict, language: submission.language,
                 submittedAtMs: BigInt(submission.submittedAtMs)
             };
-            if (existing && (!existing.platformSubmissionId || existing.platformSubmissionId === submission.platformSubmissionId)) {
+            if (existing) {
+                if (existing.deduplicationKey === submission.legacyKey) claimedLegacyKeys.add(submission.legacyKey);
                 if (existing.problemId !== submission.problemId) {
                     throw new HttpError(502, 'A platform submission could not be matched safely.', 'SUBMISSION_IDENTITY_CONFLICT');
                 }
-                if (existing.platformSubmissionId !== data.platformSubmissionId || existing.verdict !== data.verdict ||
+                if (existing.deduplicationKey !== data.deduplicationKey || existing.verdict !== data.verdict ||
                     existing.language !== data.language || existing.submittedAtMs !== data.submittedAtMs) {
                     await tx.submission.update({ where: { submissionId: existing.submissionId }, data });
                 }
-                // Claim a legacy row only once, including when two events share the same second.
+                // Claim a legacy timestamp-only row once, then identify it by its native event key.
+                existingByKey.delete(existing.deduplicationKey);
                 Object.assign(existing, data);
-                existingByNativeId.set(submission.platformSubmissionId, existing);
+                existingByKey.set(submission.nativeKey, existing);
             } else {
                 pendingInserts.set(submission.nativeKey, { ...data, deduplicationKey: submission.nativeKey });
             }

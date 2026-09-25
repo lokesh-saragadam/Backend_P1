@@ -49,7 +49,6 @@ model Problem {
   platformId        Int          @map("platformid")
   platformProblemId String       @map("problemcode") @db.VarChar(100)
   title             String       @map("problemtitle") @db.VarChar(255)
-  titleSlug         String?      @db.VarChar(255)
   difficulty        Difficulty?
   problemRating     Int?         @map("rating")
   tags              String[]
@@ -57,7 +56,6 @@ model Problem {
   submissions       Submission[]
 
   @@unique([platformId, platformProblemId])
-  @@unique([platformId, titleSlug])
   @@index([platformId])
 }
 
@@ -65,7 +63,6 @@ model Submission {
   submissionId         Int     @id @default(autoincrement()) @map("id")
   userId               Int     @map("userid")
   problemId            Int     @map("problemid")
-  platformSubmissionId String? @db.VarChar(100)
   verdict              String  @map("statusDisplay") @db.VarChar(50)
   language             String? @db.VarChar(50)
   submittedAtMs        BigInt  @map("timestamp")
@@ -73,7 +70,6 @@ model Submission {
   user                 User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
   problem              Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
 
-  @@unique([userId, problemId, platformSubmissionId])
   @@index([userId])
   @@index([problemId])
   @@index([userId, submittedAtMs])

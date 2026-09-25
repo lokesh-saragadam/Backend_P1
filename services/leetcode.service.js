@@ -1,5 +1,4 @@
 const axios = require('axios');
-const { prisma } = require('../database/client');
 const HttpError = require('../utils/httpError');
 
 const RECENT_SUBMISSION_LIMIT = 20;
@@ -33,13 +32,6 @@ async function fetchRecentAcceptedSubmissionsAndRating(leetcodeHandle) {
             id titleSlug timestamp lang
         }
     }`, { username: leetcodeHandle, limit: RECENT_SUBMISSION_LIMIT });
-}
-async function loadCachedProblemsBySlugs(titleSlugs) {
-    if (!titleSlugs.length) return [];
-    return prisma.problem.findMany({
-        where: { platform: { name: 'Leetcode' }, titleSlug: { in: titleSlugs } },
-        select: { problemId: true, platformProblemId: true, titleSlug: true }
-    });
 }
 async function fetchProblemMetadataBySlugs(titleSlugs) {
     const problems = [];
@@ -84,17 +76,18 @@ async function collectLeetCodeImportData(leetcodeHandle) {
         };
     });
     const titleSlugs = [...new Set(submissions.map(submission => submission.titleSlug))];
-    const cachedProblems = await loadCachedProblemsBySlugs(titleSlugs);
-    const cachedSlugs = new Set(cachedProblems.map(problem => problem.titleSlug));
-    const problems = await fetchProblemMetadataBySlugs(titleSlugs.filter(slug => !cachedSlugs.has(slug)));
-    const problemIdBySlug = new Map([...cachedProblems, ...problems]
+    // LeetCode exposes slugs in its submission feed. Resolve them for this import,
+    // but retain only the stable numeric problem ID in our database.
+    const resolvedProblems = await fetchProblemMetadataBySlugs(titleSlugs);
+    const problemIdBySlug = new Map(resolvedProblems
         .map(problem => [problem.titleSlug, problem.platformProblemId]));
     for (const submission of submissions) {
         submission.platformProblemId = problemIdBySlug.get(submission.titleSlug);
         if (!submission.platformProblemId) throw upstreamError();
     }
     const rating = leetcodeResponse.userContestRanking?.rating;
+    const problems = resolvedProblems.map(({ titleSlug, ...problem }) => problem);
     return { contestRating: Number.isFinite(rating) ? Math.trunc(rating) : null, problems, submissions };
 }
-module.exports = { collectLeetCodeImportData, loadCachedProblemsBySlugs, fetchProblemMetadataBySlugs };
+module.exports = { collectLeetCodeImportData, fetchProblemMetadataBySlugs };
 

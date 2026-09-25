@@ -15,27 +15,26 @@ beforeEach(() => {
     jest.resetAllMocks();
     prisma.problem.findMany.mockResolvedValue([]);
 });
-test('all cache hits still preserve all events, language, native IDs and millisecond timestamps', async () => {
+test('LeetCode metadata is resolved without persisting slugs', async () => {
     profile([event(11), event(12)]);
-    prisma.problem.findMany.mockResolvedValue([{ problemId: 42, platformProblemId: '1', titleSlug: 'two-sum' }]);
+    axios.post.mockResolvedValueOnce({ data: { data: { q0: metadata(1, 'two-sum') } } });
     const result = await collectLeetCodeImportData('test');
-    expect(result).toMatchObject({ contestRating: null, problems: [], submissions: [
+    expect(result).toMatchObject({ contestRating: null, submissions: [
         { platformSubmissionId: '11', platformProblemId: '1', language: 'python3', submittedAtMs: time },
         { platformSubmissionId: '12', platformProblemId: '1', language: 'python3', submittedAtMs: time }
     ] });
-    expect(axios.post).toHaveBeenCalledTimes(1);
+    expect(axios.post).toHaveBeenCalledTimes(2);
     expect(axios.post.mock.calls[0][1].variables.limit).toBe(20);
-    expect(prisma.problem.findMany.mock.calls[0][0].where.platform).toEqual({ name: 'Leetcode' });
+    expect(result.problems[0]).not.toHaveProperty('titleSlug');
 });
-test('mixed cache hits fetch only missing metadata and map by slug rather than duplicate display titles', async () => {
+test('metadata maps by slug rather than duplicate display titles', async () => {
     profile([event(11), event(12, 'second-problem'), event(13, 'second-problem')], { rating: 1600.5 });
-    prisma.problem.findMany.mockResolvedValue([{ problemId: 42, platformProblemId: '1', titleSlug: 'two-sum' }]);
-    axios.post.mockResolvedValueOnce({ data: { data: { q0: metadata(2, 'second-problem') } } });
+    axios.post.mockResolvedValueOnce({ data: { data: { q0: metadata(1, 'two-sum'), q1: metadata(2, 'second-problem') } } });
     const result = await collectLeetCodeImportData('test');
     expect(result.contestRating).toBe(1600);
-    expect(result.problems).toHaveLength(1);
+    expect(result.problems).toHaveLength(2);
     expect(result.submissions.map(submission => submission.platformProblemId)).toEqual(['1', '2', '2']);
-    expect(axios.post.mock.calls[1][1].variables).toEqual({ slug0: 'second-problem' });
+    expect(axios.post.mock.calls[1][1].variables).toEqual({ slug0: 'two-sum', slug1: 'second-problem' });
 });
 test('twenty events on three problems produce three metadata records and twenty events', async () => {
     profile(Array.from({ length: 20 }, (_, index) => event(index + 1, ['one', 'two', 'three'][index % 3])));
@@ -55,11 +54,11 @@ test.each([
 });
 test('missing language remains unknown and empty history needs no metadata query', async () => {
     profile([{ ...event(1), lang: null }]);
-    prisma.problem.findMany.mockResolvedValue([{ platformProblemId: '1', titleSlug: 'two-sum' }]);
+    axios.post.mockResolvedValueOnce({ data: { data: { q0: metadata(1, 'two-sum') } } });
     expect((await collectLeetCodeImportData('test')).submissions[0].language).toBeNull();
     profile([]);
     expect(await collectLeetCodeImportData('test')).toEqual({ contestRating: null, problems: [], submissions: [] });
-    expect(axios.post).toHaveBeenCalledTimes(2);
+    expect(axios.post).toHaveBeenCalledTimes(3);
 });
 test('invalid timestamps fail before any cache queries', async () => {
     profile([{ ...event(1), timestamp: 'not-a-time' }]);
@@ -77,8 +76,7 @@ function memoryTransaction(seed = []) {
         },
         submission: {
             findMany: jest.fn(async ({ where }) => rows.filter(row => row.userId === where.userId &&
-                (where.OR[0].deduplicationKey.in.includes(row.deduplicationKey) ||
-                 where.OR[1].platformSubmissionId.in.includes(row.platformSubmissionId)))),
+                where.deduplicationKey.in.includes(row.deduplicationKey))),
             update: jest.fn(async ({ where, data }) => Object.assign(rows.find(row => row.submissionId === where.submissionId), data)),
             createMany: jest.fn(async ({ data }) => {
                 for (const row of data) if (!rows.some(existing => existing.deduplicationKey === row.deduplicationKey)) {
@@ -104,13 +102,13 @@ test('cached problems record repeated attempts, retry idempotently, and remain i
 test('a legacy row is enriched, not duplicated; a second event in the same second remains distinct', async () => {
     const legacyKey = `1_42_${time}`;
     const { tx, rows } = memoryTransaction([{ submissionId: 5, userId: 1, problemId: 42,
-        platformSubmissionId: null, deduplicationKey: legacyKey, submittedAtMs: BigInt(time), verdict: 'Accepted', language: 'C++' }]);
+        deduplicationKey: legacyKey, submittedAtMs: BigInt(time), verdict: 'Accepted', language: 'C++' }]);
     const payload = { problems: [], submissions: [normalizedEvent(11), normalizedEvent(12)] };
     await persistPlatformHistory(tx, 1, 8, payload);
     await persistPlatformHistory(tx, 1, 8, payload);
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toMatchObject({ submissionId: 5, deduplicationKey: legacyKey, platformSubmissionId: '11', language: 'python3' });
-    expect(rows.map(row => row.platformSubmissionId)).toEqual(['11', '12']);
+    expect(rows[0]).toMatchObject({ submissionId: 5, deduplicationKey: 'native:1:8:11', language: 'python3' });
+    expect(rows.map(row => row.deduplicationKey)).toEqual(['native:1:8:11', 'native:1:8:12']);
 });
 test('duplicate events within a batch create one row', async () => {
     const { tx, rows } = memoryTransaction();
@@ -145,9 +143,9 @@ test('Codeforces retains failed attempts and native IDs in the shared import con
     expect(result.problems[0].problemRating).toBe(800);
 });
 
-test('missing metadata is bulk inserted, cached metadata is untouched, and legacy catalog IDs are preserved', async () => {
+test('missing metadata is bulk inserted and existing catalog IDs are preserved', async () => {
     const { tx } = memoryTransaction();
-    const problem = { platformProblemId: '1', title: 'Two Sum', titleSlug: 'two-sum', difficulty: 'Easy', problemRating: null, tags: ['array'] };
+    const problem = { platformProblemId: '1', title: 'Two Sum', difficulty: 'Easy', problemRating: null, tags: ['array'] };
     tx.problem.createMany = jest.fn();
     tx.problem.update = jest.fn();
     tx.problem.findMany.mockResolvedValueOnce([]).mockResolvedValue([{ problemId: 42, ...problem }]);
@@ -155,9 +153,9 @@ test('missing metadata is bulk inserted, cached metadata is untouched, and legac
     expect(tx.problem.createMany).toHaveBeenCalledWith({ data: [{ platformId: 8, ...problem }], skipDuplicates: true });
     await persistPlatformHistory(tx, 1, 8, { problems: [problem], submissions: [] });
     expect(tx.problem.update).not.toHaveBeenCalled();
-    tx.problem.findMany.mockResolvedValue([{ problemId: 42, ...problem, titleSlug: null }]);
+    tx.problem.findMany.mockResolvedValue([{ problemId: 42, ...problem }]);
     await persistPlatformHistory(tx, 1, 8, { problems: [problem], submissions: [] });
-    expect(tx.problem.update).toHaveBeenCalledWith(expect.objectContaining({ where: { problemId: 42 } }));
+    expect(tx.problem.update).not.toHaveBeenCalled();
 });
 test('serialization failures are retried, other database failures propagate', async () => {
     prisma.$transaction.mockRejectedValueOnce({ code: 'P2034' }).mockResolvedValueOnce('completed');
