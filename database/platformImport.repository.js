@@ -1,5 +1,6 @@
 const { prisma } = require('./client');
 const HttpError = require('../utils/httpError');
+const normalizeVerdict = require('../utils/normalizeVerdict');
 
 async function ensurePlatforms(tx, platformHandles) {
     const platformsByName = new Map();
@@ -65,7 +66,10 @@ async function insertSubmissions(tx, userId, platformId, submissions, problemIdB
             const data = {
                 userId, problemId: submission.problemId, deduplicationKey: submission.nativeKey,
                 verdict: submission.verdict, language: submission.language,
-                submittedAtMs: BigInt(submission.submittedAtMs)
+                submittedAtMs: BigInt(submission.submittedAtMs),
+                normalizedVerdict: normalizeVerdict(submission.verdict),
+                platformSubmissionId: submission.platformSubmissionId,
+                source: 'platform_sync'
             };
             if (existing) {
                 if (existing.deduplicationKey === submission.legacyKey) claimedLegacyKeys.add(submission.legacyKey);
@@ -73,7 +77,7 @@ async function insertSubmissions(tx, userId, platformId, submissions, problemIdB
                     throw new HttpError(502, 'A platform submission could not be matched safely.', 'SUBMISSION_IDENTITY_CONFLICT');
                 }
                 if (existing.deduplicationKey !== data.deduplicationKey || existing.verdict !== data.verdict ||
-                    existing.language !== data.language || existing.submittedAtMs !== data.submittedAtMs) {
+                    existing.language !== data.language || existing.submittedAtMs !== data.submittedAtMs || existing.normalizedVerdict !== data.normalizedVerdict) {
                     await tx.submission.update({ where: { submissionId: existing.submissionId }, data });
                 }
                 // Claim a legacy timestamp-only row once, then identify it by its native event key.

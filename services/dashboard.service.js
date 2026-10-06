@@ -3,6 +3,7 @@
  **/
 
 const { prisma } = require('../database/client')
+const normalizeVerdict = require('../utils/normalizeVerdict');
 const log = require("../utils/logger");
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -271,14 +272,16 @@ async function recordManualSubmission({
     where: {
       deduplicationKey: deduplicationKey
     },
-    update: { 
-      verdict: status, 
-      language: language 
+    update: {
+      verdict: status,
+      normalizedVerdict: normalizeVerdict(status),
+      language: language
     },
     create: {
       userId: userId,
       problemId: problemId,
       verdict: status,
+      normalizedVerdict: normalizeVerdict(status),
       language: language,
       submittedAtMs: unixTimestamp,
       deduplicationKey: deduplicationKey

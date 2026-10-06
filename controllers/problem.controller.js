@@ -3,6 +3,7 @@ const asyncHandler = require('express-async-handler');
 const { collectCodeforcesImportData } = require('../services/codeforces.service');
 const { collectLeetCodeImportData, fetchProblemMetadataBySlugs } = require('../services/leetcode.service');
 const { persistUserPlatformHistory, persistPlatformHistory } = require('../database/platformImport.repository');
+const normalizeVerdict = require('../utils/normalizeVerdict');
 const HttpError = require('../utils/httpError');
 // Reject control bytes in externally supplied text fields.
 // eslint-disable-next-line no-control-regex
@@ -97,14 +98,17 @@ const importClientSubmissions = asyncHandler(async (req, res) => {
     await prisma.$transaction(async tx => {
         for (const record of records) {
             const problemId = problemIdByPlatformProblemId.get(record.platformProblemId);
+            const normalizedVerdict = normalizeVerdict(record.verdict);
             const nativeKey = record.platformSubmissionId &&
                 `native:${req.user.userId}:${platformData.platformId}:${record.platformSubmissionId}`;
             if (nativeKey) {
                 await tx.submission.upsert({
                     where: { deduplicationKey: nativeKey },
                     create: { userId: req.user.userId, problemId, deduplicationKey: nativeKey,
-                        verdict: record.verdict, language: record.language, submittedAtMs: BigInt(record.submittedAtMs) },
-                    update: { verdict: record.verdict, language: record.language, submittedAtMs: BigInt(record.submittedAtMs) }
+                        verdict: record.verdict, language: record.language, submittedAtMs: BigInt(record.submittedAtMs), normalizedVerdict,
+                        platformSubmissionId: record.platformSubmissionId, source: 'client_import' },
+                    update: { verdict: record.verdict, language: record.language, submittedAtMs: BigInt(record.submittedAtMs), normalizedVerdict,
+                        platformSubmissionId: record.platformSubmissionId, source: 'client_import' }
                 });
                 continue;
             }
@@ -120,9 +124,10 @@ const importClientSubmissions = asyncHandler(async (req, res) => {
                 where: { deduplicationKey },
                 create: {
                     userId: req.user.userId, problemId, deduplicationKey,
-                    verdict: record.verdict, language: record.language, submittedAtMs: BigInt(record.submittedAtMs)
+                    verdict: record.verdict, language: record.language, submittedAtMs: BigInt(record.submittedAtMs), normalizedVerdict,
+                    source: 'client_import'
                 },
-                update: { verdict: record.verdict, language: record.language }
+                update: { verdict: record.verdict, language: record.language, normalizedVerdict, source: 'client_import' }
             });
         }
     });
@@ -164,7 +169,7 @@ const importExtensionLeetcodeHistory = asyncHandler(async (req, res) => {
     }
     const platform = await prisma.platform.upsert({ where: { name: 'Leetcode' }, update: {}, create: { name: 'Leetcode' } });
     await prisma.$transaction(tx => persistPlatformHistory(tx, req.user.userId, platform.platformId, {
-        problems: metadata.map(({ titleSlug, ...problem }) => problem), submissions: trustedSubmissions
+        problems: metadata.map(({ titleSlug: _titleSlug, ...problem }) => problem), submissions: trustedSubmissions
     }), { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 });
     res.json({ success: true, result: { submissionsProcessed: records.length, skippedExisting: 0,
         problemsProcessed: metadata.length } });

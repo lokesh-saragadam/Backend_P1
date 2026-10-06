@@ -6,6 +6,7 @@ const { listProblems, importLinkedPlatformHistory, importClientSubmissions, impo
 const { getCatalogSummary } = require('../controllers/catalogStats.controller');
 const { authenticate, requireOwner } = require('../middleware/protectRoutes');
 const { getDashboard } = require('../controllers/dashboard.controller');
+const recommendations = require('../controllers/recommendation.controller');
 
 router.post('/register', registerUser);
 router.post('/login', loginUser);
@@ -14,6 +15,8 @@ router.route('/users/:id').all(requireOwner).get(getCurrentUser).post(importLink
 router.get('/stats/summary', getCatalogSummary);
 router.route('/problems').get(listProblems).post(requireOwner, importLinkedPlatformHistory);
 router.get('/dashboard/:id', requireOwner, getDashboard);
+router.get('/recommendations', recommendations.list);
+router.post('/recommendations/:recommendationId/events', recommendations.recordEvent);
 router.post('/Leetcode/:id', requireOwner, importClientSubmissions);
 router.post('/imports/leetcode/:id', requireOwner, importExtensionLeetcodeHistory);
 module.exports = { router };

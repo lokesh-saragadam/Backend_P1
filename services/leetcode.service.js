@@ -86,7 +86,7 @@ async function collectLeetCodeImportData(leetcodeHandle) {
         if (!submission.platformProblemId) throw upstreamError();
     }
     const rating = leetcodeResponse.userContestRanking?.rating;
-    const problems = resolvedProblems.map(({ titleSlug, ...problem }) => problem);
+    const problems = resolvedProblems.map(({ titleSlug: _titleSlug, ...problem }) => problem);
     return { contestRating: Number.isFinite(rating) ? Math.trunc(rating) : null, problems, submissions };
 }
 module.exports = { collectLeetCodeImportData, fetchProblemMetadataBySlugs };

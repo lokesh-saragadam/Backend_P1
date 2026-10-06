@@ -28,6 +28,7 @@ async function main() {
             const legacyTime = submittedAtMs + 1000;
             const legacy = await tx.submission.create({ data: { userId: user.userId, problemId: storedProblem.problemId,
                 submittedAtMs: BigInt(legacyTime), verdict: 'Accepted', language: 'C++',
+                normalizedVerdict: 'ACCEPTED',
                 deduplicationKey: `${user.userId}_${storedProblem.problemId}_${legacyTime}` } });
             await persistPlatformHistory(tx, user.userId, platform.platformId, { problems: [],
                 submissions: [{ ...event(3), submittedAtMs: legacyTime }, { ...event(4), submittedAtMs: legacyTime }] });

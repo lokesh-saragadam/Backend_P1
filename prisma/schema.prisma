@@ -22,6 +22,8 @@ model User {
   createdAt    DateTime     @default(now()) @map("created_at")
   userHandles  UserHandle[]
   submissions  Submission[]
+  recommendations Recommendation[]
+  problemContexts  UserProblemContext[]
 }
 
 model Platform {
@@ -52,8 +54,14 @@ model Problem {
   difficulty        Difficulty?
   problemRating     Int?         @map("rating")
   tags              String[]
+  canonicalUrl      String?      @map("canonical_url") @db.VarChar(500)
+  metadataSource    String?      @map("metadata_source") @db.VarChar(100)
+  metadataUpdatedAt DateTime?    @map("metadata_updated_at")
   platform          Platform     @relation(fields: [platformId], references: [platformId], onDelete: Cascade)
   submissions       Submission[]
+  metadata          ProblemMetadata?
+  recommendations   Recommendation[]
+  userContexts      UserProblemContext[]
 
   @@unique([platformId, platformProblemId])
   @@index([platformId])
@@ -64,7 +72,10 @@ model Submission {
   userId               Int     @map("userid")
   problemId            Int     @map("problemid")
   verdict              String  @map("statusDisplay") @db.VarChar(50)
+  normalizedVerdict    String  @default("OTHER") @map("normalized_verdict") @db.VarChar(20)
   language             String? @db.VarChar(50)
+  platformSubmissionId String? @map("platform_submission_id") @db.VarChar(100)
+  source               String? @db.VarChar(50)
   submittedAtMs        BigInt  @map("timestamp")
   deduplicationKey      String  @unique @map("submissionKey") @db.VarChar(255)
   user                 User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
@@ -73,6 +84,67 @@ model Submission {
   @@index([userId])
   @@index([problemId])
   @@index([userId, submittedAtMs])
+  @@index([userId, normalizedVerdict, problemId])
   @@index([problemId, verdict])
+}
+
+model ProblemMetadata {
+  problemMetadataId  Int      @id @default(autoincrement()) @map("problem_metadata_id")
+  problemId          Int      @unique @map("problemid")
+  patterns           String[] @default([])
+  concepts           String[] @default([])
+  prerequisites      String[] @default([])
+  learningObjectives String[] @default([]) @map("learning_objectives")
+  provenance         String   @default("unreviewed") @db.VarChar(50)
+  reviewedAt         DateTime? @map("reviewed_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  problem            Problem  @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+}
+
+enum RecommendationOutcome {
+  NOT_YET_KNOWN
+  ACCEPTED
+  ATTEMPTED_NOT_SOLVED
+  DISMISSED
+  EXPIRED
+}
+
+model Recommendation {
+  recommendationId Int                   @id @default(autoincrement()) @map("recommendation_id")
+  userId           Int                   @map("userid")
+  problemId        Int                   @map("problemid")
+  score            Float?
+  reasonCodes      String[]              @default([]) @map("reason_codes")
+  componentScores  Json?                 @map("component_scores")
+  modelVersion     String                @default("rule-based-v1") @map("model_version") @db.VarChar(100)
+  recommendedAt    DateTime              @default(now()) @map("recommended_at")
+  shownAt          DateTime?             @map("shown_at")
+  openedAt         DateTime?             @map("opened_at")
+  dismissedAt      DateTime?             @map("dismissed_at")
+  startedAt        DateTime?             @map("started_at")
+  outcome          RecommendationOutcome @default(NOT_YET_KNOWN)
+  user             User                  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  problem          Problem               @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+
+  @@index([userId, outcome, recommendedAt])
+  @@index([userId, problemId])
+}
+
+model UserProblemContext {
+  userProblemContextId Int      @id @default(autoincrement()) @map("user_problem_context_id")
+  userId               Int      @map("userid")
+  problemId            Int      @map("problemid")
+  confidence           Int?
+  timeSpentSeconds     Int?     @map("time_spent_seconds")
+  hintsUsed            Boolean? @map("hints_used")
+  perceivedDifficulty  Int?     @map("perceived_difficulty")
+  notes                String?  @db.Text
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  user                 User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  problem              Problem  @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+
+  @@unique([userId, problemId])
 }
 
