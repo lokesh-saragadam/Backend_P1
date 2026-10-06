@@ -1,5 +1,6 @@
 const axios = require('axios');
 const HttpError = require('../utils/httpError');
+const { buildCanonicalProblemUrl } = require('../utils/canonicalProblemUrl');
 
 async function fetchCodeforces(method, params) {
     const response = await axios.get('https://codeforces.com/api/' + method, { params, timeout: 10000 });
@@ -27,7 +28,8 @@ function normalizeSubmissionsAndProblems(platformSubmissions) {
         }
         const platformProblemId = problem.contestId + '-' + problem.index;
         problemsById.set(platformProblemId, {
-            platformProblemId, title: problem.name, problemRating: problem.rating ?? null, tags: problem.tags
+            platformProblemId, title: problem.name, problemRating: problem.rating ?? null, tags: problem.tags,
+            canonicalUrl: buildCanonicalProblemUrl('Codeforces', { platformProblemId }), metadataSource: 'codeforces_api'
         });
         return {
             platformProblemId, platformSubmissionId: String(submission.id),

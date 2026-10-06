@@ -2,16 +2,19 @@ const { prisma } = require('../database/client');
 const { buildLearnerProfile } = require('./recommendationProfile.service');
 const { getCandidateProblems, getVisibleRecommendations, calculateDifficultyRange } = require('../database/recommendation.repository');
 
-const MODEL_VERSION = 'rule-based-v1';
+const PLATFORM_CODEFORCES = 'Codeforces';
+const PLATFORM_LEETCODE = 'Leetcode';
+const MODEL_VERSIONS = { Codeforces: 'codeforces-rule-based-v1', Leetcode: 'leetcode-difficulty-fit-v1' };
+const LEETCODE_LEVEL = { Easy: 1, Medium: 2, Hard: 3 };
+const LEETCODE_LEARNING_VALUE = { Easy: 0.25, Medium: 1, Hard: 0.65 };
+const LEETCODE_CHALLENGE_OFFSET = 0.2;
 
 /**
  * TODO(RECOMMENDATION_ALGORITHM): Implement the transparent rule-based score.
  * Return [{ problem, score, reasonCodes, componentScores }]. Do not hide the
  * reasons: they are part of the learning experience and debugging surface.
  */
-function rankCandidates(candidates, profile, difficultyRange) {
-    const MAX_TAG_HISTORY = 5;
-
+function rankCodeforcesCandidates(candidates, profile, difficultyRange) {
     function clamp(value, min = 0, max = 1) {
         return Math.max(min, Math.min(max, value));
     }
@@ -248,39 +251,61 @@ function rankCandidates(candidates, profile, difficultyRange) {
         .sort((a, b) => b.score - a.score);
 }
 
-async function generateRecommendations(userId, limit = 5) {
-    const profile = await buildLearnerProfile(userId);
-    console.log('PROFILE BUILT');
-    const difficultyRange = await calculateDifficultyRange(profile);
-    console.log('DIFFICULTY RANGE:',difficultyRange);
-    const candidates = await getCandidateProblems(profile,{minRating: difficultyRange.min, maxRating: difficultyRange.max});
-     console.log('CANDIDATES:',candidates.length);
-     if (candidates.length > 0) {
-        console.log('FIRST CANDIDATE:',JSON.stringify(candidates[0],null,2));
+/** Weighted average across distinct solves; newest successful solve gets 1.5x weight. */
+function calculateLeetCodeLearnerLevel(profile) {
+    const solved = [...profile.acceptedProblems.values()].filter(problem => LEETCODE_LEVEL[problem.difficulty]);
+    if (!solved.length) return 1;
+    let weightedTotal = 0;
+    let weights = 0;
+    for (let index = 0; index < solved.length; index++) {
+        const weight = 1 + ((solved.length - index - 1) / Math.max(solved.length - 1, 1)) * 0.5;
+        weightedTotal += LEETCODE_LEVEL[solved[index].difficulty] * weight;
+        weights += weight;
     }
-    const ranked = rankCandidates(candidates, profile, difficultyRange).slice(0, limit);
-    console.log("ranked : ",ranked.length);
-    // Once rankCandidates is implemented, persist its output here. Keep this
-    // write separate from ranking so a bad scorer cannot corrupt event history.
-    console.log('top 3 ranked:', ranked.slice(0, 3).map(r => ({
-            problemId: r.problem.problemId,
-            score: r.score,
-            reasonCodes: r.reasonCodes,
-        })));
+    return weightedTotal / weights;
+}
+
+function rankLeetCodeCandidates(candidates, profile) {
+    const learnerLevel = calculateLeetCodeLearnerLevel(profile);
+    const targetLevel = Math.min(3, learnerLevel + LEETCODE_CHALLENGE_OFFSET);
+    return candidates.map(problem => {
+        const difficultyLevel = LEETCODE_LEVEL[problem.difficulty];
+        if (!difficultyLevel) return null;
+        const distanceFit = Math.max(0, 1 - Math.abs(difficultyLevel - targetLevel) / 2);
+        const difficultyFit = distanceFit * LEETCODE_LEARNING_VALUE[problem.difficulty];
+        const tagWeaknessScore = problem.tags.length ? problem.tags.reduce((total, tag) => {
+            const stat = profile.tagStats[tag];
+            return total + (!stat?.attemptedProblems ? 0.5 : 1 - ((stat.acceptedProblems + 1) / (stat.attemptedProblems + 2)));
+        }, 0) / problem.tags.length : 0.5;
+        const freshnessScore = profile.recentProblemIds.has(problem.problemId) ? 0 : 1;
+        const score = 0.60 * difficultyFit + 0.25 * tagWeaknessScore + 0.15 * freshnessScore;
+        const reasonCodes = ['UNSOLVED'];
+        if (difficultyFit >= 0.7) reasonCodes.push('APPROPRIATE_DIFFICULTY');
+        if (tagWeaknessScore >= 0.6) reasonCodes.push('WEAK_TAG');
+        return { problem, score, reasonCodes, componentScores: { learnerLevel, targetLevel, difficultyLevel, distanceFit,
+            learningValue: LEETCODE_LEARNING_VALUE[problem.difficulty], difficultyFit, tagWeaknessScore, freshnessScore } };
+    }).filter(Boolean).sort((a, b) => b.score - a.score);
+}
+
+async function generateRecommendations(userId, platformName, limit = 5) {
+    const profile = await buildLearnerProfile(userId, platformName);
+    const difficultyRange = platformName === PLATFORM_CODEFORCES ? await calculateDifficultyRange(profile) : null;
+    const candidates = await getCandidateProblems(profile, platformName, difficultyRange ? { minRating: difficultyRange.min, maxRating: difficultyRange.max } : { difficulties: ['Easy', 'Medium', 'Hard'] });
+    const ranked = (platformName === PLATFORM_LEETCODE ? rankLeetCodeCandidates(candidates, profile) : rankCodeforcesCandidates(candidates, profile, difficultyRange)).slice(0, limit);
     if (ranked.length) {
         
         await prisma.recommendation.createMany({
             data: ranked.map(row => ({ userId, problemId: row.problem.problemId, score: row.score,
-                reasonCodes: row.reasonCodes, componentScores: row.componentScores, modelVersion: MODEL_VERSION }))
+                reasonCodes: row.reasonCodes, componentScores: row.componentScores, modelVersion: MODEL_VERSIONS[platformName] }))
         });
     }
     return ranked;
 }
 
-async function listRecommendations(userId, limit = 5) {
-    let recommendations = await getVisibleRecommendations(userId, limit);
-    if (recommendations.length < limit) await generateRecommendations(userId, limit - recommendations.length);
-    recommendations = await getVisibleRecommendations(userId, limit);
+async function listRecommendations(userId, platformName = PLATFORM_CODEFORCES, limit = 5) {
+    let recommendations = await getVisibleRecommendations(userId, platformName, limit);
+    if (recommendations.length < limit) await generateRecommendations(userId, platformName, limit - recommendations.length);
+    recommendations = await getVisibleRecommendations(userId, platformName, limit);
     return recommendations;
 }
 
@@ -296,4 +321,6 @@ async function recordRecommendationEvent(userId, recommendationId, event) {
     return prisma.recommendation.update({ where: { recommendationId }, data: updates[event] });
 }
 
-module.exports = { MODEL_VERSION, rankCandidates, generateRecommendations, listRecommendations, recordRecommendationEvent };
+module.exports = { PLATFORM_CODEFORCES, PLATFORM_LEETCODE, LEETCODE_LEVEL, LEETCODE_LEARNING_VALUE,
+    LEETCODE_CHALLENGE_OFFSET, calculateLeetCodeLearnerLevel, rankCodeforcesCandidates, rankLeetCodeCandidates,
+    generateRecommendations, listRecommendations, recordRecommendationEvent };

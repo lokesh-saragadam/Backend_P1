@@ -1,16 +1,15 @@
 const { prisma } = require('./client');
 
 async function getCandidateProblems(
-    profile,
-    { minRating, maxRating, take = 500 } = {}
+    profile, platformName,
+    { minRating, maxRating, difficulties, take = 500 } = {}
 ) {
+    const platformId = profile.platformIdByName[platformName];
+    if (!platformId) return [];
     return prisma.problem.findMany({
         where: {
-            platformId: {
-                in: profile.connectedPlatformIds.length
-                    ? profile.connectedPlatformIds
-                    : [-1]
-            },
+            platformId,
+            ...(difficulties?.length ? { difficulty: { in: difficulties } } : {}),
 
             ...(minRating != null || maxRating != null
                 ? {
@@ -30,7 +29,13 @@ async function getCandidateProblems(
                     userId: profile.userId,
                     normalizedVerdict: 'ACCEPTED'
                 }
-            }
+            },
+            recommendations: {
+                none: {
+                    userId: profile.userId,
+                    outcome: 'NOT_YET_KNOWN'
+                }
+            },
         },
 
         include: {
@@ -51,11 +56,12 @@ async function getCandidateProblems(
 }
 
 
-async function getVisibleRecommendations(userId, limit) {
+async function getVisibleRecommendations(userId, platformName, limit) {
     return prisma.recommendation.findMany({
         where: {
             userId,
-            outcome: 'NOT_YET_KNOWN'
+            outcome: 'NOT_YET_KNOWN',
+            problem: { platform: { name: platformName } }
         },
 
         include: {

@@ -1,12 +1,16 @@
 const asyncHandler = require('express-async-handler');
 const HttpError = require('../utils/httpError');
-const { listRecommendations, recordRecommendationEvent } = require('../services/recommendation.service');
+const { listRecommendations, recordRecommendationEvent, PLATFORM_CODEFORCES, PLATFORM_LEETCODE } = require('../services/recommendation.service');
 
 const list = asyncHandler(async (req, res) => {
     const limit = Number(req.query.limit ?? 5);
+    const platform = req.query.platform ?? PLATFORM_CODEFORCES;
     if (!Number.isInteger(limit) || limit < 1 || limit > 10) throw new HttpError(400, 'Use a recommendation limit from 1 to 10.', 'INVALID_LIMIT');
-    const recommendations = await listRecommendations(req.user.userId, limit);
-    res.json({ recommendations });
+    if (![PLATFORM_CODEFORCES, PLATFORM_LEETCODE].includes(platform)) {
+        throw new HttpError(400, 'Choose Codeforces or Leetcode recommendations.', 'INVALID_PLATFORM');
+    }
+    const recommendations = await listRecommendations(req.user.userId, platform, limit);
+    res.json({ platform, recommendations });
 });
 
 const recordEvent = asyncHandler(async (req, res) => {

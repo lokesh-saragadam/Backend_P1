@@ -16,7 +16,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:check": "node scripts/check-database.js",
     "lint": "eslint .",
-    "db:verify-import": "node scripts/verify-import-transaction.js"
+    "db:verify-import": "node scripts/verify-import-transaction.js",
+    "db:backfill-canonical-urls": "node scripts/backfillCanonicalProblemUrls.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",

@@ -31,14 +31,18 @@ async function upsertProblems(tx, platformId, problems) {
         for (const problem of batch) {
             const metadata = {
                 title: problem.title, difficulty: problem.difficulty ?? null,
-                problemRating: problem.problemRating ?? null, tags: problem.tags
+                problemRating: problem.problemRating ?? null, tags: problem.tags,
+                ...(problem.canonicalUrl ? { canonicalUrl: problem.canonicalUrl } : {}),
+                ...(problem.metadataSource ? { metadataSource: problem.metadataSource } : {})
             };
             const existingProblem = existingById.get(problem.platformProblemId);
             if (!existingProblem) {
-                missingProblems.push({ platformId, platformProblemId: problem.platformProblemId, ...metadata });
+                missingProblems.push({ platformId, platformProblemId: problem.platformProblemId, ...metadata,
+                    ...(problem.canonicalUrl || problem.metadataSource ? { metadataUpdatedAt: new Date() } : {}) });
             } else if (Object.entries(metadata).some(([field, value]) =>
                 JSON.stringify(existingProblem[field]) !== JSON.stringify(value))) {
-                await tx.problem.update({ where: { problemId: existingProblem.problemId }, data: metadata });
+                await tx.problem.update({ where: { problemId: existingProblem.problemId }, data: { ...metadata,
+                    ...(problem.canonicalUrl || problem.metadataSource ? { metadataUpdatedAt: new Date() } : {}) } });
             }
         }
         if (missingProblems.length) await tx.problem.createMany({ data: missingProblems, skipDuplicates: true });
@@ -108,17 +112,22 @@ async function persistPlatformHistory(tx, userId, platformId, platformImport) {
 }
 async function persistUserPlatformHistory(userId, platformHandles, leetcodeImport, codeforcesImport) {
     // Serializable retries make overlapping syncs and legacy-ID reconciliation safe.
+    // console.log("Persisting user syncs .. ");
     for (let attempt = 0; attempt < 3; attempt++) {
         try {
             return await prisma.$transaction(async tx => {
                 const platformsByName = await ensurePlatforms(tx, platformHandles);
                 for (const [name, platformImport] of [['Leetcode', leetcodeImport], ['Codeforces', codeforcesImport]]) {
                     const platformId = platformsByName.get(name);
+                    // console.log("Entering upsert User Handle");
                     await upsertUserHandle(tx, userId, platformId, platformHandles[name], platformImport.contestRating ?? null);
+                    // console.log("Persisting platform history");
                     await persistPlatformHistory(tx, userId, platformId, platformImport);
+                    // console.log("Both done for transaction.")
                 }
-            }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 });
+            }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 60000 });
         } catch (error) {
+            console.log(error);
             if (error.code !== 'P2034' || attempt === 2) throw error;
             await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)));
         }

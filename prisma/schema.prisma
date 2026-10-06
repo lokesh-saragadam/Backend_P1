@@ -126,7 +126,7 @@ model Recommendation {
   outcome          RecommendationOutcome @default(NOT_YET_KNOWN)
   user             User                  @relation(fields: [userId], references: [userId], onDelete: Cascade)
   problem          Problem               @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
-
+  
   @@index([userId, outcome, recommendedAt])
   @@index([userId, problemId])
 }

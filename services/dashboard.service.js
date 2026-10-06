@@ -215,28 +215,59 @@ async function getSubmissionCountsByDate(userId){
  * Most recent N attempted problems with problem + platform info attached.
  */
 async function getRecentActivity(userId, limit = 10) {
-  const rows = await prisma.submission.findMany({
-    where: { userId: userId },
-    orderBy: { submittedAtMs: 'desc' },
-    take: limit,
-    select: {
-      submissionId: true,
-      problemId: true,
-      submittedAtMs: true,
-      verdict: true,
-      language: true,
-      problem: {
-        select: {
-          title: true,
-          difficulty: true,
-          problemRating: true,
-          platform: { select: { name: true } },
+  const results = [];
+  const seenProblemIds = new Set();
+  
+  let skip = 0;
+  const BATCH_SIZE = 50; // Fetch in chunks to avoid heavy DB loads
+  let hasMore = true;
+
+  while (hasMore && seenProblemIds.size < limit) {
+    const rows = await prisma.submission.findMany({
+      where: { userId: userId },
+      orderBy: { submittedAtMs: 'desc' },
+      take: BATCH_SIZE,
+      skip: skip,
+      select: {
+        submissionId: true,
+        problemId: true,
+        submittedAtMs: true,
+        verdict: true,
+        language: true,
+        problem: {
+          select: {
+            title: true,
+            difficulty: true,
+            problemRating: true,
+            platform: { select: { name: true } },
+          },
         },
       },
-    },
-  });
+    });
 
-  return rows.map((row) => ({
+    // If we get an empty batch, the user has no more submissions
+    if (rows.length === 0) {
+      hasMore = false;
+      break;
+    }
+
+    for (const row of rows) {
+      seenProblemIds.add(row.problemId);
+      
+      // If adding this row exceeds our unique problems limit, stop collecting
+      if (seenProblemIds.size > limit) {
+        hasMore = false;
+        break; 
+      }
+      
+      results.push(row);
+    }
+
+    skip += BATCH_SIZE;
+  }
+
+  // Format the collected results
+  return results.map((row) => ({
     submissionId: row.submissionId,
     problemId: row.problemId,
     title: row.problem.title,

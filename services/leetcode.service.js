@@ -1,5 +1,6 @@
 const axios = require('axios');
 const HttpError = require('../utils/httpError');
+const { buildCanonicalProblemUrl } = require('../utils/canonicalProblemUrl');
 
 const RECENT_SUBMISSION_LIMIT = 20;
 const METADATA_BATCH_SIZE = 20;
@@ -51,7 +52,8 @@ async function fetchProblemMetadataBySlugs(titleSlugs) {
             problems.push({
                 platformProblemId: String(metadata.questionId), titleSlug: metadata.titleSlug,
                 title: metadata.title, difficulty: metadata.difficulty,
-                problemRating: null, tags: metadata.topicTags.map(tag => tag.slug)
+                problemRating: null, tags: metadata.topicTags.map(tag => tag.slug),
+                canonicalUrl: buildCanonicalProblemUrl('Leetcode', { titleSlug: metadata.titleSlug }), metadataSource: 'leetcode_graphql'
             });
         });
     }

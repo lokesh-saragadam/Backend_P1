@@ -24,6 +24,7 @@ const listProblems = asyncHandler(async (req, res) => {
 
 const importLinkedPlatformHistory = asyncHandler(async (req, res) => {
     const platformHandles = req.body?.platforms;
+    // console.log("platformHandles : ",platformHandles);
     // Both handles are required by the existing importer. Independent linking is deferred.
     if (!platformHandles || Array.isArray(platformHandles) ||
         Object.keys(platformHandles).some(key => !['Leetcode', 'Codeforces'].includes(key)) ||
@@ -41,6 +42,7 @@ const importLinkedPlatformHistory = asyncHandler(async (req, res) => {
         if (error.name?.startsWith('Prisma') || /^P\d{4}$/.test(error.code || '')) throw error;
         throw new HttpError(502, 'Could not import platform data. Check both handles and try again.', 'PLATFORM_IMPORT_FAILED');
     }
+    // console.log("Leetcode and codeforces imported");
     await persistUserPlatformHistory(req.user.userId, platformHandles, leetcodeImport, codeforcesImport);
     res.json({ success: true, message: 'Your platform data has been imported.' });
 });
